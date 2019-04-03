@@ -1,0 +1,286 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+
+<!-- Put site-specific property overrides in this file. -->
+
+<configuration>
+
+  <!-- In: conf/core-site.xml -->
+  <property>
+    <name>hadoop.tmp.dir</name>
+    <value><%= node['hops']['tmp_dir'] %></value>
+    <description>A base for other temporary directories.</description>
+  </property>
+
+  <!--
+      <property>
+      <name>io.file.buffer.size</name>
+      <value><%= node['hops']['io_buffer_sz'] %></value>
+      <description>Size of read/write buffer used in SequenceFiles.</description>
+      </property>
+  -->
+
+  <property>
+    <name>dfs.namenodes.rpc.addresses</name>
+    <value><%= @allNNs %></value>
+    <description>HopsFS-specific list of comma-separated host:port pairs for NameNodes.</description>
+  </property>
+
+  <property>
+    <name>ipc.client.connect.max.retries</name>
+    <value><%= node['hops']['max_retries'] %></value>
+    <description>If a HDFS client has a communication problem with a NameNode, retry the connection the number of times specified here.</description>
+  </property>
+
+
+  <property>
+    <name>dfs.storage.driver.configfile</name>
+    <value>ndb.props</value>
+    <description>
+    </description>
+  </property>
+
+
+  <property>
+    <name>hadoop.proxyuser.<%= node['hops']['hdfs']['user'] %>.hosts</name>
+    <value>*</value>
+  </property>
+  <property>
+    <name>hadoop.proxyuser.<%= node['hops']['hdfs']['user'] %>.groups</name>
+    <value>*</value>
+  </property>
+  <property>
+    <name>hadoop.proxyuser.<%= @hopsworksUser %>.hosts</name>
+    <value>*</value>
+  </property>
+  <property>
+    <name>hadoop.proxyuser.<%= @hopsworksUser %>.groups</name>
+    <value>*</value>
+  </property>
+  <property>
+    <name>hadoop.proxyuser.<%= node['hops']['yarn']['user'] %>.hosts</name>
+    <value>*</value>
+  </property>
+  <property>
+    <name>hadoop.proxyuser.<%= node['hops']['yarn']['user'] %>.groups</name>
+    <value>*</value>
+  </property>
+  <property>
+    <name>hadoop.proxyuser.<%= node['hops']['yarnapp']['user'] %>.hosts</name>
+    <value>*</value>
+  </property>
+  <property>
+    <name>hadoop.proxyuser.<%= node['hops']['yarnapp']['user'] %>.groups</name>
+    <value>*</value>
+  </property>
+  <property>
+    <name>hadoop.proxyuser.<%= node['hops']['rm']['user'] %>.hosts</name>
+    <value>*</value>
+  </property>
+  <property>
+    <name>hadoop.proxyuser.<%= node['hops']['rm']['user'] %>.groups</name>
+    <value>*</value>
+  </property>
+  <property>
+    <name>hadoop.proxyuser.<%= @livyUser %>.hosts</name>
+    <value>*</value>
+  </property>
+  <property>
+    <name>hadoop.proxyuser.<%= @livyUser %>.groups</name>
+    <value>*</value>
+  </property>
+  <property>
+    <name>hadoop.proxyuser.<%= @hiveUser %>.hosts</name>
+    <value>*</value>
+  </property>
+  <property>
+    <name>hadoop.proxyuser.<%= @hiveUser %>.groups</name>
+    <value>*</value>
+  </property>
+    <property>
+    <name>hadoop.proxyuser.<%= @jupyterUser %>.hosts</name>
+    <value>*</value>
+  </property>
+  <property>
+    <name>hadoop.proxyuser.<%= @jupyterUser %>.groups</name>
+    <value>*</value>
+  </property>
+  <property>
+    <name>hadoop.proxyuser.<%= node['hops']['mr']['user'] %>.hosts</name>
+    <value>*</value>
+  </property>
+  <property>
+    <name>hadoop.proxyuser.<%= node['hops']['mr']['user'] %>.groups</name>
+    <value>*</value>
+  </property>
+  <property>
+    <name>hadoop.proxyuser.<%= @sqoopUser %>.hosts</name>
+    <value>*</value>
+  </property>
+  <property>
+    <name>hadoop.proxyuser.<%= @sqoopUser %>.groups</name>
+    <value>*</value>
+  </property>
+
+
+  <property>
+    <name>dfs.leader.check.interval</name>
+    <value>2000</value>
+    <description>Interval between the NameNode or ResourceMgr running the leader election protocol. </description>
+  </property>
+
+  <property>
+    <name>dfs.leader.missed.hb</name>
+    <value>2</value>
+    <description></description>
+  </property>
+
+  <property>
+    <name>dfs.leader.tp.increment</name>
+    <value>100</value>
+    <description></description>
+  </property>
+
+
+  <!-- SSL -->
+  <property>
+    <name>hadoop.ssl.require.client.cert</name>
+    <value>false</value>
+  </property>
+  <property>
+    <name>hadoop.ssl.hostname.verifier</name>
+    <value>DEFAULT</value>
+    <description></description>
+  </property>
+  <property>
+    <name>hadoop.ssl.keystores.factory.class</name>
+    <value>org.apache.hadoop.security.ssl.FileBasedKeyStoresFactory</value>
+    <description></description>
+  </property>
+  <property>
+    <name>hadoop.ssl.server.conf</name>
+    <value>ssl-server.xml</value>
+    <description></description>
+  </property>
+  <property>
+    <name>hadoop.ssl.client.conf</name>
+    <value>ssl-client.xml</value>
+    <description></description>
+  </property>
+
+
+  <property>
+    <name>fs.defaultFS</name>
+    <value><%= @firstNN %></value>
+  </property>
+
+  <property>
+    <name>fs.trash.interval</name>
+    <value><%= node['hops']['trash']['interval'] %></value>
+  </property>
+
+  <property>
+    <name>fs.trash.checkpoint.interval</name>
+    <value><%= node['hops']['trash']['checkpoint']['interval'] %></value>
+  </property>
+
+  <property>
+    <name>hadoop.security.groups.cache.secs</name>
+    <value>1</value>
+  </property>
+
+  <property>
+    <name>ipc.server.read.threadpool.size</name>
+    <value><%= node['hops']['server']['threadpool'] %></value>
+  </property>
+
+  <!-- RPC TLS support -->
+  <property>
+    <name>ipc.server.ssl.enabled</name>
+    <value><%= node['hops']['tls']['enabled'] %></value>
+  </property>
+
+  <property>
+    <name>hadoop.ssl.hostname.verifier</name>
+    <value><%= node['hops']['hadoop']['ssl']['hostname']['verifier'] %></value>
+  </property>
+
+  <property>
+    <name>hadoop.rpc.socket.factory.class.default</name>
+    <value><%= @rpcSocketFactory %></value>
+  </property>
+
+  <% if node['hops']['tls']['enabled'].eql? "true" -%>
+
+  <property>
+    <name>hadoop.ssl.enabled.protocols</name>
+    <value><%= node['hops']['hadoop']['ssl']['enabled']['protocols'] %></value>
+  </property>
+
+  <!--
+      Directory where service certificates exist. It is used by
+      HopsSSLSocketFactory for superuser.
+      Default: /srv/hops/kagent-certs/keystores
+  -->
+  <property>
+    <name>hops.service.certificates.directory</name>
+    <value><%= node['kagent']['keystore_dir'] %></value>
+  </property>
+
+  <!--
+      Directory where users' certificates are materialized from
+      Hopsworks. It is used by HopsSSLSocketFactory to setup the
+      correct crypto material for non-superuser.
+      Default: /srv/hops/domains/domain1/kafkacerts
+  -->
+  <property>
+    <name>client.materialize.directory</name>
+    <value><%= node['certs']['dir'] %>/transient</value>
+  </property>
+
+  <!-- TLS client configuration -->
+
+  <property>
+    <name>client.rpc.ssl.enabled.protocol</name>
+    <value>TLSv1.2</value>
+  </property>
+
+  <property>
+    <name>hadoop.http.static.user</name>
+    <value><%= @hopsworksUser %></value>
+  </property>
+
+  <property>
+    <name>hadoop.ssl.require.client.cert</name>
+    <value>true</value>
+  </property>
+
+  <!-- CRL validation configuration -->
+  <property>
+    <name>hops.crl.validation.enabled</name>
+    <value><%= node['hops']['tls']['crl_enabled'] %></value>
+  </property>
+  
+  <property>
+    <name>hops.crl.fetcher.class</name>
+    <value><%= node['hops']['tls']['crl_fetcher_class'] %></value>
+  </property>
+
+  <property>
+    <name>hops.crl.input.uri</name>
+    <value><%= @hopsworks_crl_uri %></value>
+  </property>
+
+  <property>
+    <name>hops.crl.output.file</name>
+    <value><%= node['hops']['tls']['crl_output_file'] %></value>
+  </property>
+
+  <property>
+    <name>hops.crl.fetcher.interval</name>
+    <value><%= node['hops']['tls']['crl_fetcher_interval'] %></value>
+  </property>
+
+  <% end -%>
+ 
+</configuration>

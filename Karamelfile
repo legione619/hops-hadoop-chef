@@ -1,0 +1,39 @@
+dependencies:
+  - recipe: hops::install
+    global:
+      - conda::install
+      - kagent::install
+  - recipe: hops::ndb
+    global:
+      - ndb::mysqld
+  - recipe: hops::nn
+    global:
+      - hopsmonitor::default
+      - kagent::default
+      - hops::ndb
+# This is to handle upgrades from 0.6 to 0.7
+# Make sure the hive db has been migrated with inodeid long
+# before starting the fs.
+      - hive2::db
+  - recipe: hops::rm
+    global:
+      - hops::dn
+      - kzookeeper::default
+  - recipe: hops::dn
+    global:
+      - hops::nn
+      - kagent::default
+  - recipe: hops::nm
+    global:
+      - hops::rm
+      - hadoop_spark::yarn
+  - recipe: hops::jhs
+    global:
+      - hops::dn
+  - recipe: hops::client
+    global:
+      - hops::nn
+  - recipe: hops::test
+    global:
+      - hops::dn
+
