@@ -9,7 +9,7 @@ cookbook 'ndb', github: "logicalclocks/ndb-chef", branch: "0.9"
 cookbook 'hopsmonitor', github: "giabbo79/hopsmonitor-chef", branch: "master"
 cookbook 'conda', github: "logicalclocks/conda-chef", branch: "0.9"
 cookbook 'kzookeeper', github: "logicalclocks/kzookeeper", branch: "0.9"
-cookbook 'elastic', github: "giabbo79/elasticsearch-chef", branch: "master"
+cookbook 'elastic', github: "giabbo79/elastic-chef", branch: "master"
 
 cookbook 'magic_shell'
 cookbook 'sysctl', '~> 1.0.3'
