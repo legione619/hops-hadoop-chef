@@ -25,6 +25,11 @@
     </description>
   </property>
 
+  <property>
+    <name>dfs.namenode.http-address</name>
+    <value><%= @nn_http_address %></value>
+    <description>The address and the base port where the dfs namenode web ui will listen on. </description>
+  </property>
 
   <property>
     <name>dfs.client.max.retries.on.failure</name>
@@ -58,7 +63,7 @@
 
   <property>
     <name>dfs.namenode.handler.count</name>
-    <value>120</value>
+    <value><%= node['hops']['nn']['handler_count'] %></value>
     <description>The RPC server that listens to requests from clients</description>
   </property>
 
@@ -78,13 +83,13 @@
 
   <property>
     <name>dfs.namenode.inodeid.batchsize</name>
-    <value>100000</value>
+    <value><%= node['hops']['dfs']['inodeid']['batchsize'] %></value>
     <description></description>
   </property>
 
   <property>
     <name>dfs.namenode.blockid.batchsize</name>
-    <value>100000</value>
+    <value><%= node['hops']['dfs']['blockid']['batchsize'] %></value>
     <description></description>
   </property>
 
@@ -132,7 +137,7 @@
 
   <property>
     <name>dfs.namenode.processReport.batchsize</name>
-    <value>10000</value>
+    <value><%= node['hops']['dfs']['processReport']['batchsize'] %></value>
     <description>This is the number of blocks to be processed in one transaction.
     Higher values can result in higher throughput, but too high values can cause transactions to fail.
     </description>
@@ -140,7 +145,7 @@
 
   <property>
     <name>dfs.namenode.misreplicated.batchsize</name>
-    <value>500</value>
+    <value><%= node['hops']['dfs']['misreplicated']['batchsize'] %></value>
     <description>
 
     </description>
@@ -148,7 +153,7 @@
 
   <property>
     <name>dfs.namenode.misreplicated.noofbatches</name>
-    <value>10</value>
+    <value><%= node['hops']['dfs']['misreplicated']['noofbatches'] %></value>
     <description>
     </description>
   </property>
@@ -209,7 +214,7 @@
 
   <property>
     <name>dfs.namenode.quota.enabled</name>
-    <value>true</value>
+    <value><%= node['hops']['hdfs']['quota_enabled'] %></value>
     <description></description>
   </property>
 
@@ -320,13 +325,14 @@
 </property>
 
 <property>
-  <name>dfs.datanode.https.address</name>
-  <value><%= node['hops']['dfs']['datanode']['https']['address'] %></value>
+  <name>dfs.namenode.https-address</name>
+  <value><%= @nn_https_address %></value>
+  <description>The address and the base port where the dfs namenode web ui will listen on. </description>
 </property>
 
 <property>
-  <name>dfs.namenode.http-address</name>
-  <value><%= @nnHTTPAddress %></value>
+  <name>dfs.datanode.https.address</name>
+  <value><%= node['hops']['dfs']['datanode']['https']['address'] %></value>
 </property>
 
 <property>
@@ -381,6 +387,41 @@
 <property>
    <name>dfs.block.access.token.enable</name>
    <value><%= node['hops']['encrypt_data_transfer']['enabled'] %></value>
+</property>
+
+<property>
+   <name>dfs.namenode.enable.retrycache</name>
+   <value><%= node['hops']['nn']['enable_retrycache'] %></value>
+</property>
+
+<property>
+   <name>dfs.locationDomainId</name>
+   <value><%= @location_domain_id %></value>
+</property>
+
+<property>
+  <name>dfs.hosts.exclude</name>
+  <value><%= node['hops']['conf_dir'] %>/dfs.exclude</value>
+</property>
+
+<property>
+   <name>dfs.datanode.balance.max.concurrent.moves</name>
+   <value><%= node['hops']['dfs']['balance']['max_concurrent_moves'] %></value>
+</property>
+
+<property>
+   <name>dfs.namenode.replication.max-streams</name>
+   <value><%= node['hops']['dfs']['replication']['max_streams'] %></value>
+</property>
+
+<property>
+   <name>dfs.namenode.replication.max-streams-hard-limit</name>
+   <value><%= node['hops']['dfs']['replication']['max_streams_hard_limit'] %></value>
+</property>
+
+<property>
+   <name>dfs.namenode.replication.work.multiplier.per.iteration</name>
+   <value><%= node['hops']['dfs']['replication']['work_multiplier_per_iteration'] %></value>
 </property>
 
 </configuration>

@@ -4,7 +4,7 @@ maintainer_email "jdowling@kth.se"
 license          "Apache v2.0"
 description      'Installs/Configures the Hops distribution'
 long_description IO.read(File.join(File.dirname(__FILE__), 'README.md'))
-version          "0.9.0"
+version          "1.0.0"
 source_url       "https://github.com/hopshadoop/hops-hadoop-chef"
 
 
@@ -20,7 +20,7 @@ recipe            "hops::ps", "Installs a WebProxy Server for YARN"
 recipe            "hops::rt", "Installs a ResourceTracker server for YARN"
 recipe            "hops::client", "Installs libaries and configuration files for writing HDFS and YARN progams"
 recipe            "hops::purge", "Removes all hops-hadoop files and dirs and ndb-dal, but doesnt drop hops db from NDB"
-recipe            "hops::purge-ndb", "Drops  hops db from NDB"
+recipe            "hops::_config", "Internal recipe for setting config values"
 
 depends 'java'
 depends 'kagent'
@@ -29,7 +29,6 @@ depends 'magic_shell'
 depends 'sysctl'
 depends 'cmake'
 depends 'kzookeeper'
-depends 'hopsmonitor'
 
 %w{ ubuntu debian rhel centos }.each do |os|
   supports os
@@ -201,17 +200,17 @@ attribute "hops/rm/public_ips",
           :description => "Set ip addresses",
           :type => "array"
 
+attribute "hops/jhs/root_dir",
+          :description => "Root directory in HDFS for MapReduce History Server",
+          :type => "string"
+
 # Needed to find the jar file for yan-spark-shuffle
 attribute "hadoop_spark/version",
           :description => "Spark version",
           :type => 'string'
 
-attribute "hops/url/primary",
-          :description => "Primary download url of hops distribution",
-          :type => 'string'
-
-attribute "hops/url/secondary",
-          :description => "Secondary download url of hops distribution",
+attribute "hops/root_url",
+          :description => "Download url of hops distribution artifacts",
           :type => 'string'
 
 attribute "hops/server/threadpool",
@@ -222,16 +221,40 @@ attribute "hops/tls/enabled",
           :description => "'true' will enable RPC TLS and 'false' will disable it",
           :type => 'string'
 
-attribute "hops/tls/certs_actor_class",
-          :description => "Actor class to perform X509 requests to Hopsworks",
+attribute "hops/tls/prod",
+          :description => "default is 'false' (accepts untrusted certificates by default). Set to 'true' for production environments.",
           :type => 'string'
 
-attribute "hops/tls/certs_expiration_safety_period",
-          :description => "Time to substract fro X509 expiration time for renewal",
+attribute "hops/rmappsecurity/actor_class",
+          :description => "Actor class for RMAppSecurityManager to perform X.509/JWT requests to Hopsworks",
           :type => 'string'
 
-attribute "hops/tls/certs_revocation_monitor_interval",
+attribute "hops/rmappsecurity/x509/expiration_safety_period",
+          :description => "Time to substract from X509 expiration time for renewal",
+          :type => 'string'
+
+attribute "hops/rmappsecurity/x509/revocation_monitor_interval",
           :description => "Period to check for stale X509 certificates that should be revoked",
+          :type => 'string'
+
+attribute "hops/rmappsecurity/jwt/enabled",
+          :description => "Enable JWT on Yarn",
+          :type => 'string'
+
+attribute "hops/rmappsecurity/jwt/validity",
+          :description => "Validity period for JWT. Valid suffices are ms, s, m, h, d",
+          :type => 'string'
+
+attribute "hops/rmappsecurity/jwt/expiration-leeway",
+          :description => "Expiration leeway period, Valid suffices are s, m, h, d",
+          :type => 'string'
+
+attribute "hops/rmappsecurity/jwt/audience",
+          :description => "Comma separated list of JWT audiences",
+          :type => 'string'
+
+attribute "hops/rmappsecurity/jwt/master-token-validity",
+          :description => "Validity period for ResourceManager's master service JWT. Valid suffices are s, m, h, d",
           :type => 'string'
 
 attribute "hops/tls/crl_enabled",
@@ -330,6 +353,46 @@ attribute "hops/hdfs/umask",
           :description => "Set the default HDFS umask (default: 0022).",
           :type => 'string'
 
+attribute "hops/dfs/inodeid/batchsize",
+          :description => "Inodeid batchsize",
+          :type => 'string'
+
+attribute "hops/dfs/blockid/batchsize",
+          :description => "blockid batchsize",
+          :type => 'string'
+
+attribute "hops/dfs/processReport/batchsize",
+          :description => "Number of blocks processed in one processReport transaction",
+          :type => 'string'
+
+attribute "hops/dfs/misreplicated/batchsize",
+          :description => "Number of blocks processed in one misreplicated transaction",
+          :type => 'string'
+
+attribute "hops/dfs/misreplicated/noofbatches",
+          :description => "Misreplicated number of batches",
+          :type => 'string'
+
+attribute "hops/dfs/replication/max_streams",
+          :description => "Hard limit for the number of highest-priority replication streams.",
+          :type => 'string'
+
+attribute "hops/dfs/replication/max_streams_hard_limit",
+          :description => "Hard limit for all replication streams.",
+          :type => 'string'
+
+attribute "hops/dfs/replication/work_multiplier_per_iteration",
+          :description => "Set dfs.namenode.replication.work.multiplier.per.iteration",
+          :type => 'string'
+
+attribute "hops/dfs/balance/max_concurrent_moves",
+          :description => "Maximum number of threads for Datanode balancer pending moves",
+          :type => 'string'
+
+attribute "hops/dfs/excluded_hosts",
+          :description => "Comma separated list of hosts to exclude from the HDFS cluster",
+          :type => 'string'
+
 attribute "hops/format",
           :description => "Format HDFS, Run 'hdfs namenode -format",
           :type => 'string'
@@ -360,10 +423,6 @@ attribute "hops/yarn/nodemanager_hb_ms",
 
 attribute "hops/rm/scheduler_class",
           :description => "Java Classname for the Yarn scheduler (fifo, capacity, fair)",
-          :type => 'string'
-
-attribute "hops/user_envs",
-          :description => "Update the PATH environment variable for the hdfs and yarn users to include hadoop/bin in the PATH ",
           :type => 'string'
 
 attribute "hops/logging_level",
@@ -435,10 +494,6 @@ attribute "install/user",
           :description => "User to install the services as",
           :type => "string"
 
-attribute "influxdb/graphite/port",
-          :description => "Port for influxdb graphite connector",
-          :type => "string"
-
 #GPU settings
 attribute "hops/yarn/min_gpus",
           :description => "Min number of GPUs per container",
@@ -460,13 +515,13 @@ attribute "hops/yarn/cluster/gpu",
           :description => "Is there a machine in the cluster with gpus?",
           :type => "string"
 
+attribute "hops/yarn/gpu_impl_class",
+          :description => "hops-gpu-management-impl class to use, set to 'io.hops.management.nvidia.NvidiaManagementLibrary' for Nvidia GPUs, 'io.hops.management.amd.AMDManagementLibrary' for AMD GPUs",
+          :type => "string"
+
 #CGroups settings
 attribute "hops/yarn/groups",
           :description => "",
-          :type => "string"
-
-attribute "hops/yarn/linux_container_local_user",
-          :description => "the user running the yarn containers",
           :type => "string"
 
 attribute "hops/yarn/linux_container_limit_users",
@@ -475,6 +530,18 @@ attribute "hops/yarn/linux_container_limit_users",
 
 attribute "hops/yarn/cgroups",
           :description => "'true' to enable cgroups (default), else 'false'",
+          :type => "string"
+
+attribute "hops/yarn/cgroups_deletion_timeout",
+          :description => "timeout in ms for deleting Cgroups",
+          :type => "string"
+
+attribute "hops/yarn/cgroups_max_cpu_usage",
+          :description => "max accumulated CPU usage of containers",
+          :type => "string"
+
+attribute "hops/yarnapp/home_dir",
+          :description => "home directory for yarnapp user",
           :type => "string"
 
 attribute "livy/user",
@@ -489,13 +556,41 @@ attribute "hops/jmx/adminPassword",
           :description => "Password for JMX admin role",
           :type => "string"
 
-attribute "hopsmonitor/default/private_ips",
-          :description => "Hopsworks username",
-          :type => "string"
-
 attribute "hopsworks/default/private_ips",
           :description => "Hopsworks private ip",
           :type => "string"
+
+attribute "hops/nn/private_ips_domainIds",
+          :description => "private_ips to LocationDomainIds for namenodes",
+          :type => "hash"
+
+attribute "hops/dn/private_ips_domainIds",
+          :description => "private_ips to LocationDomainIds for datanodes",
+          :type => "hash"
+
+attribute "hops/topology",
+          :description => "'true' or 'false' - true to enable the network topology. Default is false.",
+          :type => "string"
+
+attribute "hops/nn/enable_retrycache",
+          :description => "'true' or 'false' - true to enable retryCache. Default is true.",
+          :type => "string"
+
+attribute "hops/hdfs/quota_enabled",
+          :description => "'true' or 'false' - true to enable hdfs quota. Default is true.",
+          :type => "string"
+
+attribute "hops/nn/handler_count",
+          :description => "Number of RPC handlers",
+          :type => "string" 
+
+attribute "hops/retry_policy_spec",
+          :description => "Retry policy specification. For example '10000,6,60000,10' means retry 6 times with 10 sec delay and then retry 10 times with 1 min delay.",
+          :type => "string" 
+
+attribute "hops/retry_policy_enabled",
+          :description => "Enable retry upon connection failure",
+          :type => "string" 
 
 # Kernel tuning parameters
 attribute "hops/kernel/somaxconn",

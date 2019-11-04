@@ -1,14 +1,27 @@
 include_recipe "hops::default"
 
+template_ssl_server()
+
 for script in node['hops']['dn']['scripts']
-  template "#{node['hops']['home']}/sbin/#{script}" do
+  template "#{node['hops']['sbin_dir']}/#{script}" do
     source "#{script}.erb"
     owner node['hops']['hdfs']['user']
-    owner node['hops']['hdfs']['user']
-    group node['hops']['group']
-    mode 0775
+    group node['hops']['secure_group']
+    mode 0750
   end
 end 
+
+cookbook_file "#{node['hops']['conf_dir']}/datanode.yaml" do 
+  source "metrics/datanode.yaml"
+  owner node['hops']['hdfs']['user']
+  group node['hops']['group']
+  mode 500
+end
+
+deps = ""
+if exists_local("hops", "nn") 
+  deps = "namenode.service"
+end  
 
 service_name="datanode"
 
@@ -38,6 +51,9 @@ if node['hops']['systemd'] == "true"
     owner "root"
     group "root"
     mode 0664
+    variables({
+              :deps => deps
+              })
 if node['services']['enabled'] == "true"
     notifies :enable, "service[#{service_name}]"
 end
@@ -91,6 +107,5 @@ if node['kagent']['enabled'] == "true"
     service "HDFS"
     log_file "#{node['hops']['logs_dir']}/hadoop-#{node['hops']['hdfs']['user']}-#{service_name}-#{node['hostname']}.log"
     config_file "#{node['hops']['conf_dir']}/hdfs-site.xml"
-    web_port node['hops']['dn']['http_port']
   end
 end

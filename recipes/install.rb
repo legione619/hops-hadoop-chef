@@ -1,21 +1,16 @@
+include_recipe "hops::_config"
+include_recipe "java"
+
 group node['kagent']['certs_group'] do
   action :create
   not_if "getent group #{node['kagent']['certs_group']}"
+  not_if { node['install']['external_users'].casecmp("true") == 0 }
 end
 
 
 magic_shell_environment 'LD_LIBRARY_PATH' do
   value "#{node['hops']['base_dir']}/lib/native:$LD_LIBRARY_PATH"
 end
-
-
-case node['platform']
-when "ubuntu"
- if node['platform_version'].to_f <= 14.04
-   node.override['hops']['systemd'] = "false"
- end
-end
-
 
 # http://blog.cloudera.com/blog/2015/01/how-to-deploy-apache-hadoop-clusters-like-a-boss/
 # Set Kernel parameters
@@ -48,16 +43,17 @@ if node['platform_family'].eql?("redhat")
   end
 end
 
-include_recipe "java"
 
 group node['hops']['group'] do
   action :create
   not_if "getent group #{node['hops']['group']}"
+  not_if { node['install']['external_users'].casecmp("true") == 0 }
 end
 
 group node['hops']['secure_group'] do
   action :create
   not_if "getent group #{node['hops']['secure_group']}"
+  not_if { node['install']['external_users'].casecmp("true") == 0 }
 end
 
 user node['hops']['hdfs']['user'] do
@@ -68,6 +64,7 @@ user node['hops']['hdfs']['user'] do
   manage_home true
   action :create
   not_if "getent passwd #{node['hops']['hdfs']['user']}"
+  not_if { node['install']['external_users'].casecmp("true") == 0 }
 end
 
 user node['hops']['yarn']['user'] do
@@ -76,6 +73,7 @@ user node['hops']['yarn']['user'] do
   shell "/bin/bash"
   action :create
   not_if "getent passwd #{node['hops']['yarn']['user']}"
+  not_if { node['install']['external_users'].casecmp("true") == 0 }
 end
 
 user node['hops']['mr']['user'] do
@@ -84,16 +82,18 @@ user node['hops']['mr']['user'] do
   shell "/bin/bash"
   action :create
   not_if "getent passwd #{node['hops']['mr']['user']}"
+  not_if { node['install']['external_users'].casecmp("true") == 0 }
 end
 
 user node['hops']['yarnapp']['user'] do
   gid node['hops']['group']
   system true
+  manage_home true
   shell "/bin/bash"
   action :create
   not_if "getent passwd #{node['hops']['yarnapp']['user']}"
+  not_if { node['install']['external_users'].casecmp("true") == 0 }
 end
-
 
 user node['hops']['rm']['user'] do
   gid node['hops']['secure_group']
@@ -101,24 +101,35 @@ user node['hops']['rm']['user'] do
   shell "/bin/bash"
   action :create
   not_if "getent passwd #{node['hops']['rm']['user']}"
+  not_if { node['install']['external_users'].casecmp("true") == 0 }
+end
+
+group "video" do
+  action :modify
+  members [node['hops']['yarnapp']['user']]
+  append true
+  not_if { node['install']['external_users'].casecmp("true") == 0 }
 end
 
 group node['hops']['secure_group'] do
   action :modify
-  members ["#{node['hops']['rm']['user']}"]
+  members [node['hops']['rm']['user'], node['hops']['mr']['user'], node['hops']['yarn']['user']]
   append true
+  not_if { node['install']['external_users'].casecmp("true") == 0 }
 end
 
 group node['hops']['group'] do
   action :modify
-  members ["#{node['hops']['hdfs']['user']}", "#{node['hops']['yarn']['user']}", "#{node['hops']['mr']['user']}", "#{node['hops']['yarnapp']['user']}", "#{node['hops']['rm']['user']}"]
+  members [node['hops']['hdfs']['user'], node['hops']['yarn']['user'], node['hops']['mr']['user'], node['hops']['yarnapp']['user'], node['hops']['rm']['user']]
   append true
+  not_if { node['install']['external_users'].casecmp("true") == 0 }
 end
 
 group node['kagent']['certs_group'] do
   action :modify
-  members ["#{node['hops']['hdfs']['user']}", "#{node['hops']['yarn']['user']}", "#{node['hops']['rm']['user']}", "#{node['hops']['mr']['user']}"]
+  members [node['hops']['hdfs']['user'], node['hops']['yarn']['user'], node['hops']['rm']['user'], node['hops']['mr']['user']]
   append true
+  not_if { node['install']['external_users'].casecmp("true") == 0 }
 end
 
 case node['platform_family']
@@ -246,15 +257,14 @@ directory nndir do
   action :create
 end
 
-primary_url = node['hops']['url']['primary']
-secondary_url = node['hops']['url']['secondary']
-Chef::Log.info "Attempting to download hadoop binaries from #{primary_url} or, alternatively, #{secondary_url}"
+dist_url = node['hops']['dist_url']
+Chef::Log.info "Attempting to download hadoop binaries from #{dist_url}"
 
-base_package_filename = File.basename(primary_url)
+base_package_filename = File.basename(dist_url)
 cached_package_filename = "#{Chef::Config['file_cache_path']}/#{base_package_filename}"
 
 remote_file cached_package_filename do
-  source primary_url
+  source dist_url
   retries 2
   owner node['hops']['hdfs']['user']
   group node['hops']['group']
@@ -262,20 +272,6 @@ remote_file cached_package_filename do
   ignore_failure true
   # TODO - checksum
   action :create_if_missing
-end
-
-base_package_filename = File.basename(secondary_url)
-cached_package_filename = "#{Chef::Config['file_cache_path']}/#{base_package_filename}"
-
-remote_file cached_package_filename do
-  source secondary_url
-  retries 2
-  owner node['hops']['hdfs']['user']
-  group node['hops']['group']
-  mode "0755"
-  # TODO - checksum
-  action :create_if_missing
-  not_if { ::File.exist?(cached_package_filename) }
 end
 
 hin = "#{node['hops']['home']}/.#{base_package_filename}_installed"
@@ -294,12 +290,21 @@ bash 'extract-hadoop' do
 
         # chown -L : traverse symbolic links
         chown -RL #{node['hops']['hdfs']['user']}:#{node['hops']['group']} #{node['hops']['base_dir']}
-        chmod 750 #{node['hops']['home']}
+        chmod 755 #{node['hops']['home']}
 
         # Write flag
         touch #{hin}
 	EOH
   not_if { ::File.exist?("#{hin}") }
+end
+
+bash 'chown-sbin' do 
+  user 'root'
+  group 'root'
+  code <<-EOH
+    chown -R #{node['hops']['hdfs']['user']}:#{node['hops']['secure_group']} #{node['hops']['sbin_dir']}
+    chmod -R 550 #{node['hops']['sbin_dir']}
+  EOH
 end
 
 directory node['hops']['logs_dir'] do
@@ -322,7 +327,7 @@ for dir in lce_dirs do
   directory dir do
     owner "root"
     group node['hops']['group']
-    mode "0750"
+    mode "0755"
   end
 end
 
@@ -332,6 +337,17 @@ file "#{node['hops']['bin_dir']}/container-executor" do
   group node['hops']['group']
   mode "6150"
 end
+
+# Download JMX prometheus exporter 
+jmx_prometheus_filename = File.basename(node['hops']['jmx']['prometheus_exporter']['url'])
+remote_file "#{node['hops']['share_dir']}/common/lib/#{jmx_prometheus_filename}" do
+  source node['hops']['jmx']['prometheus_exporter']['url']
+  owner node['hops']['hdfs']['user']
+  group node['hops']['group']
+  mode '0755'
+  action :create
+end
+
 
 if node['hops']['native_libraries'] == "true"
 
@@ -409,13 +425,27 @@ template "#{node['hops']['conf_dir']}/mapred-site.xml" do
   source "mapred-site.xml.erb"
   owner node['hops']['mr']['user']
   group node['hops']['group']
-  mode "750"
+  mode "754"
   variables({
       :rm_private_ip => rm_private_ip,
       :jhs_private_ip => jhs_private_ip
   })
   action :create
 end
+
+# This is here for client machines. These are machines that run Hopsworks or 
+# other services, but they don't run Hadoop services. 
+# These services read the ssl-server.xml for configuring TLS. 
+# We template it here, so that it can be used with single node vms, where when
+# Hopsworks starts, it needs to read the ssl-server.xml
+# During a fresh installation, certificates won't be available at this stage, however,
+# the configuration will be still correct. Clients will fail until the certificates are
+# actually generated. This is fine.
+# At this stage we don't add the JWT token (False parameter) as Hopsworks is not running yet
+# The RM recipe will re-template this file and, at that stage, with the Hopsworks server running, 
+# the JWT will be added.
+Chef::Recipe.send(:include, Hops::Helpers)
+template_ssl_server(false)
 
 template "/etc/ld.so.conf.d/hops.conf" do
   source "hops.conf.erb"
@@ -446,5 +476,21 @@ template "#{node['hops']['conf_dir']}/hadoop_logs_mgm.ini" do
   owner node['hops']['hdfs']['user']
   group node['hops']['group']
   mode "0740"
+  action :create
+end
+
+cookbook_file "#{node['hops']['sbin_dir']}/renew_service_jwt.py" do
+  source "renew_service_jwt.py"
+  owner node['hops']['hdfs']['user']
+  group node['kagent']['certs_group']
+  mode "0700"
+  action :create
+end
+
+template "#{node['hops']['sbin_dir']}/conda_renew_service_jwt.sh" do
+  source "conda_renew_service_jwt.sh.erb"
+  owner node['hops']['hdfs']['user']
+  group node['hops']['certs_group']
+  mode "0700"
   action :create
 end

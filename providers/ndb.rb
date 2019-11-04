@@ -43,13 +43,14 @@ action :install_hops do
 
   bash "flyway_migrate" do
     user "root"
+    timeout 36000
     code <<-EOF
     set -e
     cd #{flyway_dir}
     #{flyway_dir}/flyway migrate
   EOF
   end
-
+  
 end
 
 
@@ -119,4 +120,26 @@ action :install_ndb_hops do
     to "#{node['hops']['dir']}/ndb-hops-#{node['hops']['version']}-#{node['ndb']['version']}/libhopsyarn-#{node['hops']['version']}-#{node['ndb']['version']}.so"
   end
 
+end
+
+action :format_nn do
+
+  formatMarker="#{node['hops']['tmp_dir']}/.nn_formatted"
+  if "#{node['hops']['reformat']}" === "true"
+    ::File.delete(formatMarker)
+  end
+  
+  bash 'format-nn' do
+    user node['hops']['hdfs']['user']
+    group node['hops']['secure_group']
+    retries 1
+    retry_delay 30
+    code <<-EOH
+      set -e
+      sleep 10 # 10 seconds
+      #{node['hops']['base_dir']}/sbin/format-nn.sh
+      touch #{formatMarker}
+ 	  EOH
+    not_if {::File.exist?(formatMarker)}
+  end
 end
