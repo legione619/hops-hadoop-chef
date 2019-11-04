@@ -1,10 +1,10 @@
+include_attribute "conda"
 include_attribute "kagent"
 include_attribute "ndb"
 include_attribute "kzookeeper"
-include_attribute "hopsmonitor"
 
-default['hops']['versions']                    = "2.8.2.2,2.8.2.3,2.8.2.4,2.8.2.5,2.8.2.6"
-default['hops']['version']                     = "2.8.2.7"
+default['hops']['versions']                    = "2.8.2.2,2.8.2.3,2.8.2.4,2.8.2.5,2.8.2.6,2.8.2.7"
+default['hops']['version']                     = "2.8.2.8"
 
 default['hops']['hdfs']['user']                = node['install']['user'].empty? ? "hdfs" : node['install']['user']
 default['hops']['group']                       = node['install']['user'].empty? ? "hadoop" : node['install']['user']
@@ -33,6 +33,7 @@ default['hops']['logs_dir']                    = node['hops']['base_dir'] + "/lo
 default['hops']['tmp_dir']                     = node['hops']['data_dir'] + "/tmp"
 default['hops']['conf_dir_parent']             = node['hops']['base_dir'] + "/etc"
 default['hops']['conf_dir']                    = node['hops']['conf_dir_parent'] + "/hadoop"
+default['hops']['share_dir']                    = node['hops']['base_dir'] + "/share/hadoop"
 
 default['hops']['dn']['data_dir']              = "file://" + node['hops']['data_dir'] + "/hdfs/dn"
 default['hops']['dn']['data_dir_permissions']  = '700'
@@ -45,8 +46,10 @@ default['hops']['hdfs']['user_home']           = "/user"
 default['hops']['hdfs']['blocksize']           = "134217728"
 default['hops']['hdfs']['umask']               = "0022"
 
-default['hops']['url']['primary']              = node['download_url'] + "/hops-" + node['hops']['version'] + ".tgz"
-default['hops']['url']['secondary']            = "https://www.hops.site/hops-" + node['hops']['version'] + ".tgz"
+
+
+default['hops']['root_url']                    = node['download_url']
+default['hops']['dist_url']                    = node['hops']['root_url'] + "/hops-" + node['hops']['version'] + ".tgz"
 
 default['hops']['install_protobuf']            = "false"
 default['hops']['protobuf_url']                = "https://protobuf.googlecode.com/files/protobuf-2.5.0.tar.gz"
@@ -61,15 +64,17 @@ default['hops']['leader_check_interval_ms']    = 1000
 default['hops']['missed_hb']                   = 1
 default['hops']['num_replicas']                = 3
 default['hops']['db']                          = "hops"
-default['hops']['nn']['scripts']               = %w{ start-nn.sh stop-nn.sh restart-nn.sh root-start-nn.sh hdfs.sh yarn.sh hadoop.sh }
-default['hops']['dn']['scripts']               = %w{ start-dn.sh stop-dn.sh restart-dn.sh root-start-dn.sh hdfs.sh yarn.sh hadoop.sh }
+default['hops']['nn']['scripts']               = %w{ start-nn.sh stop-nn.sh restart-nn.sh }
+default['hops']['dn']['scripts']               = %w{ start-dn.sh stop-dn.sh restart-dn.sh }
 default['hops']['max_retries']                 = 0
+default['hops']['retry_policy_spec']           = "1000,3"
+default['hops']['retry_policy_enabled']         = "true"
 default['hops']['reformat']                    = "false"
 default['hops']['format']                      = "true"
 default['hops']['io_buffer_sz']                = 131072
 default['hops']['container_cleanup_delay_sec'] = 0
 
-default['hops']['yarn']['scripts']             = %w{ start stop restart root-start }
+default['hops']['yarn']['scripts']             = %w{ start stop restart }
 default['hops']['yarn']['ps_port']             = 20888
 
 case node['platform_family']
@@ -129,8 +134,9 @@ default['hops']['rm']['scheduler_capacity']['calculator_class']  = "org.apache.h
 default['hops']['mr']['tmp_dir']               = "/mapreduce"
 default['hops']['mr']['staging_dir']           = "#{default['hops']['mr']['tmp_dir']}/#{default['hops']['mr']['user']}/staging"
 
-default['hops']['jhs']['inter_dir']            = "/mr-history/done_intermediate"
-default['hops']['jhs']['done_dir']             = "/mr-history/done"
+default['hops']['jhs']['root_dir']             = "/mr-history"
+default['hops']['jhs']['inter_dir']            = "#{node['hops']['jhs']['root_dir']}/done_intermediate"
+default['hops']['jhs']['done_dir']             = "#{node['hops']['jhs']['root_dir']}/done"
 
 # YARN CONFIG VARIABLES
 # http://hadoop.apache.org/docs/current/hadoop-yarn/hadoop-yarn-common/yarn-default.xml
@@ -139,6 +145,7 @@ default['hops']['jhs']['done_dir']             = "/mr-history/done"
 # http://hadoop.apache.org/docs/r2.1.0-beta/hadoop-mapreduce-client/hadoop-mapreduce-client-core/PluggableShuffleAndPluggableSort.html
 
 default['hops']['nn']['jmxport']               = "8077"
+default['hops']['dn']['jmxport']               = "8078"
 default['hops']['rm']['jmxport']               = "8082"
 default['hops']['nm']['jmxport']               = "8083"
 
@@ -173,10 +180,8 @@ default['hops']['limits']['nofile']            = '32768'
 default['hops']['limits']['nproc']             = '65536'
 default['hops']['limits']['memory_limit']      = '100000'
 
-default['hops']['user_envs']                   = "true"
-
 default['hops']['logging_level']               = "WARN"
-default['hops']['nn']['direct_memory_size']    = 100
+default['hops']['nn']['direct_memory_size']    = "250"
 default['hops']['ha_enabled']                  = "false"
 
 default['hops']['systemd']                     = "true"
@@ -204,16 +209,16 @@ default['ndb']['libndb']                    = "#{node['mysql']['version_dir']}/l
 default['mysql']['port']                    = default['ndb']['mysql_port']
 default['hadoop']['mysql_url']              = "jdbc:mysql://#{node['ndb']['mysql_ip']}:#{default['ndb']['mysql_port']}/"
 
-default['hops']['schema_dir']               = "#{node['download_url']}/hops-schemas"
+default['hops']['schema_dir']               = "#{node['hops']['root_url']}/hops-schemas"
 
 default['hops']['log_level']                = "DEBUG"
 
-default['hops']['hdfs']['blocksize']        = "134217728"
-
-default['dal']['download_url']              = "#{node['download_url']}/ndb-dal-#{node['hops']['version']}-#{node['ndb']['version']}.jar"
-default['dal']['lib_url']                   = "#{node['download_url']}/libhopsyarn-#{node['hops']['version']}-#{node['ndb']['version']}.so"
-default['nvidia']['download_url']           = "#{node['download_url']}/nvidia-management-#{node['hops']['version']}-#{node['ndb']['version']}.jar"
-default['hops']['libnvml_url']              = "#{node['download_url']}/libhopsnvml-#{node['hops']['version']}.so"
+default['dal']['download_url']              = "#{node['hops']['root_url']}/ndb-dal-#{node['hops']['version']}-#{node['ndb']['version']}.jar"
+default['dal']['lib_url']                   = "#{node['hops']['root_url']}/libhopsyarn-#{node['hops']['version']}-#{node['ndb']['version']}.so"
+default['nvidia']['download_url']           = "#{node['hops']['root_url']}/nvidia-management-#{node['hops']['version']}-#{node['ndb']['version']}.jar"
+default['hops']['libnvml_url']              = "#{node['hops']['root_url']}/libhopsnvml-#{node['hops']['version']}.so"
+default['amd']['download_url']              = "#{node['hops']['root_url']}/amd-management-#{node['hops']['version']}-#{node['ndb']['version']}.jar"
+default['hops']['librocm_url']              = "#{node['hops']['root_url']}/libhopsrocm-#{node['hops']['version']}.so"
 
 default['hops']['recipes']                  = %w{ nn dn rm nm jhs ps }
 
@@ -287,10 +292,24 @@ default['hops']['yarn']['rm_heapsize_mbs']                   = 1000
 
 #hdfs-site.xml
 default['hops']['dfs']['https']['enable']                    = "true"
-default['hops']['dfs']['http']['policy']   		     = "HTTPS_ONLY"
+default['hops']['dfs']['http']['policy']   		             = "HTTPS_ONLY"
 default['hops']['dfs']['datanode']['https']['address'] 	     = "0.0.0.0:50475"
 default['hops']['dfs']['https']['port']                      = "50470"
 default['hops']['dfs']['namenode']["https-address"]   	     = "0.0.0.0:50470"
+
+default['hops']['dfs']['inodeid']['batchsize']                         = "100000"
+default['hops']['dfs']['blockid']['batchsize']                         = "100000"
+
+default['hops']['dfs']['processReport']['batchsize']                   = "10"
+default['hops']['dfs']['misreplicated']['batchsize']                   = "500"
+default['hops']['dfs']['misreplicated']['noofbatches']                 = "20"
+default['hops']['dfs']['replication']['max_streams']                   = "50"
+default['hops']['dfs']['replication']['max_streams_hard_limit']        = "100"
+default['hops']['dfs']['replication']['work_multiplier_per_iteration']  = "2"
+
+default['hops']['dfs']['balance']['max_concurrent_moves']              = "50"
+
+default['hops']['dfs']['excluded_hosts']                               = ""
 
 #mapred-site.xml
 default['hops']['mapreduce']['jobhistory']['http']['policy'] = "HTTPS_ONLY"
@@ -305,6 +324,8 @@ default['hops']['yarn']['container_executor']                = "org.apache.hadoo
 
 # Use Cgroup isolation
 default['hops']['yarn']['cgroups']                        = "true"
+default['hops']['yarn']['cgroups_deletion_timeout']       = "5000"
+default['hops']['yarn']['cgroups_max_cpu_usage']          = "100"
 
 #ssl-server.xml
 default['hops']['ssl']['server']['keystore']['password']   		= node['hopsworks']['master']['password']
@@ -335,17 +356,27 @@ default['hops']['hadoop']['ssl']['hostname']['verifier']                = "ALLOW
 # Socket factory for the client
 default['hops']['hadoop']['rpc']['socket']['factory']                   = "org.apache.hadoop.net.HopsSSLSocketFactory"
 default['hops']['hadoop']['ssl']['enabled']['protocols']                = "TLSv1.2,TLSv1.1"
-default['hops']['tls']['certs_actor_class']                             = "org.apache.hadoop.yarn.server.resourcemanager.security.HopsworksRMAppCertificateActions"
+default['hops']['rmappsecurity']['actor_class']                         = "org.apache.hadoop.yarn.server.resourcemanager.security.DevHopsworksRMAppSecurityActions"
 
-default['hops']['tls']['certs_expiration_safety_period']                = "2d"
-default['hops']['tls']['certs_revocation_monitor_interval']             = "12h"
+default['hops']['rmappsecurity']['x509']['expiration_safety_period']    = "2d"
+default['hops']['rmappsecurity']['x509']['revocation_monitor_interval'] = "12h"
 
-# CRL validation when RPC TLS is enabled
-default['hops']['tls']['crl_enabled']                                   = "false"
-default['hops']['tls']['crl_fetcher_class']                             = "org.apache.hadoop.security.ssl.RemoteCRLFetcher"
+default['hops']['rmappsecurity']['jwt']['enabled']                      = "true"
+default['hops']['rmappsecurity']['jwt']['validity']                     = "30m"
+default['hops']['rmappsecurity']['jwt']['expiration-leeway']            = "5m"
+# Comma separated list of JWT audience
+default['hops']['rmappsecurity']['jwt']['audience']                     = "job"
+default['hops']['rmappsecurity']['jwt']['master-token-validity']        = "7d"
+
+# Set to 'true' if you want production TLS certificates.
+default['hops']['tls']['prod']                                          = "false"
+
+# CRL validation when RPC TLS is enabled - by default enabled it if TLS is enabled.
+default['hops']['tls']['crl_enabled']                                   = "#{node['hops']['tls']['enabled']}"
+default['hops']['tls']['crl_fetcher_class']                             = "org.apache.hadoop.security.ssl.DevRemoteCRLFetcher"
 default['hops']['tls']['crl_input_uri']                                 = ""
 default['hops']['tls']['crl_output_file']                               = "#{node['hops']['tmp_dir']}/hops_crl.pem"
-default['hops']['tls']['crl_fetcher_interval']                          = "1d"
+default['hops']['tls']['crl_fetcher_interval']                          = "5m"
 
 # DataNode Data Transfer Protocol encryption
 default['hops']['encrypt_data_transfer']['enabled']                     = "false"
@@ -369,14 +400,15 @@ default['hops']['capacity']['queue_mapping_override']['enable']         = "false
 # Flyway - Database upgrades
 #
 default['hops']['flyway']['version']                                    = "5.0.3"
-default['hops']['flyway_url']                                           = node['download_url'] + "/flyway-commandline-#{node['hops']['flyway']['version']}-linux-x64.tar.gz"
+default['hops']['flyway_url']                                           = node['hops']['root_url'] + "/flyway-commandline-#{node['hops']['flyway']['version']}-linux-x64.tar.gz"
 
 #GPU
 default['hops']['yarn']['min_gpus']                    = 0
 default['hops']['yarn']['max_gpus']                    = 10
 default['hops']['gpu']                                 = "false"
 default['hops']['yarn']['gpus']                        = "*"
-default['hops']['yarn']['linux_container_local_user']  = node['install']['user'].empty? ? "yarnapp" : node['install']['user']
+default['hops']['yarn']['gpu_impl_class']              = "io.hops.management.nvidia.NvidiaManagementLibrary"
+default['hops']['yarnapp']['home_dir']                 = "/home"
 default['hops']['yarn']['linux_container_limit_users'] = "true"
 
 # Does a machine in the cluster contain gpus?
@@ -398,3 +430,24 @@ default['hops']['kernel']['somaxconn']                  = 4096
 default['hops']['kernel']['swappiness']                 = 1
 default['hops']['kernel']['overcommit_memory']          = 1
 default['hops']['kernel']['overcommit_ratio']           = 100
+
+#LocationDomainId
+default['hops']['nn']['private_ips_domainIds']        = {}
+default['hops']['dn']['private_ips_domainIds']        = {}
+default['hops']['topology']                           = "false"
+
+# Monitoring 
+default['hops']['jmx']['prometheus_exporter']['version']  = "0.12.0"
+default['hops']['jmx']['prometheus_exporter']['url']      = "#{node['download_url']}/prometheus/jmx_prometheus_javaagent-#{node['hops']['jmx']['prometheus_exporter']['version']}.jar"
+
+default['hops']['nn']['metrics_port']                     = "19850"
+default['hops']['dn']['metrics_port']                     = "19851"
+default['hops']['nm']['metrics_port']                     = "19852"
+default['hops']['rm']['metrics_port']                     = "19853"
+
+default['hops']['nn']['enable_retrycache']            = "true"
+
+default['hops']['hdfs']['quota_enabled']              = "true"
+default['hops']['nn']['handler_count']                = 120
+
+default['hops']['gcs_url']                            = node['hops']['root_url'] + "/gcs-connector-hadoop2-latest.jar"

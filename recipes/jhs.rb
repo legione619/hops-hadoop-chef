@@ -5,26 +5,34 @@ yarn_service="jhs"
 service_name="historyserver"
 
 for script in node['hops']['yarn']['scripts']
-  template "#{node['hops']['home']}/sbin/#{script}-#{yarn_service}.sh" do
+  template "#{node['hops']['sbin_dir']}/#{script}-#{yarn_service}.sh" do
     source "#{script}-#{yarn_service}.sh.erb"
     owner node['hops']['yarn']['user']
-    group node['hops']['group']
-    mode 0775
+    group node['hops']['secure_group']
+    mode 0750
   end
 end 
 
+hops_hdfs_directory "#{node['hops']['jhs']['root_dir']}" do
+  action :create_as_superuser
+  owner node['hops']['mr']['user']
+  group node['hops']['group']
+  mode "1775"
+end
 
-tmp_dirs   = ["/mr-history", node['hops']['jhs']['inter_dir'], node['hops']['jhs']['done_dir']]
+hops_hdfs_directory "#{node['hops']['jhs']['inter_dir']}" do
+  action :create_as_superuser
+  owner node['hops']['mr']['user']
+  group node['hops']['group']
+  mode "1777"
+end
 
- for d in tmp_dirs
-   Chef::Log.info "Creating hdfs directory: #{d}"
-   hops_hdfs_directory d do
-    action :create_as_superuser
-    owner node['hops']['mr']['user']
-    group node['hops']['group']
-    mode "1775"
-   end
- end
+hops_hdfs_directory "#{node['hops']['jhs']['done_dir']}" do
+  action :create_as_superuser
+  owner node['hops']['mr']['user']
+  group node['hops']['group']
+  mode "1777"
+end
 
 node.normal['mr']['dirs'] = [node['hops']['mr']['staging_dir'], node['hops']['mr']['tmp_dir'], node['hops']['hdfs']['user_home'] + "/" + node['hops']['mr']['user']]
  for d in node['mr']['dirs']
@@ -113,7 +121,6 @@ if node['kagent']['enabled'] == "true"
     service "HISTORY_SERVERS"
     log_file "#{node['hops']['logs_dir']}/mapred-#{node['hops']['mr']['user']}-#{service_name}-#{node['hostname']}.log"
     config_file "#{node['hops']['conf_dir']}/mapred-site.xml"
-    web_port node['hops']["#{yarn_service}"]['http_port']
   end
 end
 
