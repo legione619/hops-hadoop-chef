@@ -20,7 +20,11 @@ end
 
 deps = ""
 if exists_local("ndb", "mysqld")
-  deps = "mysqld.service"
+  deps = "mysqld.service "
+end
+
+if node['hops']['tls']['crl_enabled'].casecmp?("true") and exists_local("hopsworks", "default")
+  deps += "glassfish-domain1.service "
 end
 
 service_name="namenode"

@@ -202,6 +202,11 @@
   </property>
 
   <property>
+    <name>fs.defaultFS.alternativeScheme</name>
+    <value>hopsfs</value>
+  </property>
+
+  <property>
     <name>fs.trash.interval</name>
     <value><%= node['hops']['trash']['interval'] %></value>
   </property>
@@ -237,6 +242,31 @@
     <value><%= @rpcSocketFactory %></value>
   </property>
 
+  <% if node['hops']['tls']['enabled'].casecmp?("true") or node['hops']['rmappsecurity']['jwt']['enabled'].casecmp?("true") -%>
+
+  <property>
+    <name>hops.hopsworks.host</name>
+    <value><%= @hopsworks %></value>
+  </property>
+
+  <!-- Service JWT renewal configuration -->
+  <property>
+    <name>hops.jwt-manager.master-token-validity</name>
+    <value><%= node['hops']['jwt-manager']['master-token-validity'] %></value>
+  </property>
+
+  <property>
+    <name>hops.jwt-manager.service-renew-path</name>
+    <value><%= node['hops']['jwt-manager']['renew-path'] %></value>
+  </property>
+
+  <property>
+    <name>hops.jwt-manager.service-invalidate-path</name>
+    <value><%= node['hops']['jwt-manager']['invalidate-path'] %></value>
+  </property>
+  
+  <% end -%>
+  
   <% if node['hops']['tls']['enabled'].eql? "true" -%>
 
   <property>
@@ -307,12 +337,27 @@
     <name>hops.crl.fetcher.interval</name>
     <value><%= node['hops']['tls']['crl_fetcher_interval'] %></value>
   </property>
-
   <% end -%>
+
 <% if node['hops']['topology'].eql? "true" -%>
- <property>
-   <name>net.topology.script.file.name</name>
-   <value><%=node['hops']['conf_dir']%>/get-topology.sh</value>
- </property>
+  <property>
+    <name>net.topology.script.file.name</name>
+    <value><%=node['hops']['conf_dir']%>/get-topology.sh</value>
+  </property>
 <% end -%>
+
+<% if !node['hops']['s3a']['sse_algorithm'].eql? "" -%>
+  <property>
+    <name>fs.s3a.server-side-encryption-algorithm</name>
+    <value><%= node['hops']['s3a']['sse_algorithm'] %></value>
+  </property>
+<% end -%>
+
+<% if !node['hops']['s3a']['sse_key'].eql? "" -%>
+  <property>
+    <name>fs.s3a.server-side-encryption.key</name>
+    <value><%= node['hops']['s3a']['sse_key'] %></value>
+  </property>
+<% end -%>
+
 </configuration>

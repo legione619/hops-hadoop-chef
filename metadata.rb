@@ -4,7 +4,7 @@ maintainer_email "jdowling@kth.se"
 license          "Apache v2.0"
 description      'Installs/Configures the Hops distribution'
 long_description IO.read(File.join(File.dirname(__FILE__), 'README.md'))
-version          "1.0.0"
+version          "1.2.0"
 source_url       "https://github.com/hopshadoop/hops-hadoop-chef"
 
 
@@ -82,6 +82,10 @@ attribute "hops/reformat",
 
 attribute "hops/yarn/memory_mbs",
           :description => "Apache_Hadoop NodeManager Memory in MB",
+          :type => 'string'
+
+attribute "hops/yarn/max_allocation_memory_mb",
+          :description => "The maximum allocation for every container request at the RM, in MBs",
           :type => 'string'
 
 attribute "hops/yarn/nodemanager_log_dir",
@@ -237,6 +241,14 @@ attribute "hops/rmappsecurity/x509/revocation_monitor_interval",
           :description => "Period to check for stale X509 certificates that should be revoked",
           :type => 'string'
 
+attribute "hops/rmappsecurity/x509/sign-path",
+          :description => "HTTP endpoint to submit application CSR",
+          :type => 'string'
+
+attribute "hops/rmappsecurity/x509/revoke-path",
+          :description => "HTTP endpoint to revoke application X.509",
+          :type => 'string'
+
 attribute "hops/rmappsecurity/jwt/enabled",
           :description => "Enable JWT on Yarn",
           :type => 'string'
@@ -253,8 +265,28 @@ attribute "hops/rmappsecurity/jwt/audience",
           :description => "Comma separated list of JWT audiences",
           :type => 'string'
 
-attribute "hops/rmappsecurity/jwt/master-token-validity",
-          :description => "Validity period for ResourceManager's master service JWT. Valid suffices are s, m, h, d",
+attribute "hops/rmappsecurity/jwt/generate-path",
+          :description => "HTTP endpoint to generate application JWT",
+          :type => 'string'
+
+attribute "hops/rmappsecurity/jwt/invalidate-path",
+          :description => "HTTP endpoint to invalidate application JWT",
+          :type => 'string'
+
+attribute "hops/rmappsecurity/jwt/renew-path",
+          :description => "HTTP endpoint to renew application JWT",
+          :type => 'string'
+
+attribute "hops/jwt-manager/master-token-validity",
+          :description => "Validity period for master service JWT. Valid suffices are s, m, h, d",
+          :type => 'string'
+
+attribute "hops/jwt-manager/renew-path",
+          :description => "HTTP endpoint to renew service JWT",
+          :type => 'string'
+
+attribute "hops/jwt-manager/invalidate-path",
+          :description => "HTTP endpoint to invalidate service JWT",
           :type => 'string'
 
 attribute "hops/tls/crl_enabled",
@@ -265,8 +297,8 @@ attribute "hops/tls/crl_fetcher_class",
           :description => "Canonical name of the CRL fetcher class",
           :type => 'string'
 
-attribute "hops/tls/crl_input_uri",
-          :description => "Location where the CRL will be fetched from",
+attribute "hops/tls/crl_fetch_path",
+          :description => "HTTP Path to fetch CA CRL",
           :type => 'string'
 
 attribute "hops/tls/crl_output_file",
@@ -283,6 +315,26 @@ attribute "hops/encrypt_data_transfer/enabled",
 
 attribute "hops/encrypt_data_transfer/algorithm",
           :description => "Encryption algorithm, 3des or rc4",
+          :type => 'string'
+
+attribute "hops/yarn/detect-hardware-capabilities",
+          :description => "Enable auto-detection of node capabilities such as memory and CPU.",
+          :type => 'string'
+
+attribute "hops/yarn/logical-processors-as-cores",
+          :description => "Determine if logical processors should be counted as cores",
+          :type => 'string'
+
+attribute "hops/yarn/pcores-vcores-multiplier",
+          :description => "Multiplier to determine how to convert phyiscal cores to vcores",
+          :type => 'string'
+
+attribute "hops/yarn/system-reserved-memory-mb",
+          :description => "Amount of physical memory, in MB, that is reserved for non-YARN processes. If set to -1 it's 20% of total memory",
+          :type => 'string'
+
+attribute "hops/yarn/pmem_check",
+          :description => "Whether physical memory limits will be enforced for containers.",
           :type => 'string'
 
 attribute "hops/yarn/vcores",
@@ -391,6 +443,14 @@ attribute "hops/dfs/balance/max_concurrent_moves",
 
 attribute "hops/dfs/excluded_hosts",
           :description => "Comma separated list of hosts to exclude from the HDFS cluster",
+          :type => 'string'
+
+attribute "hops/fs-security-actions/actor_class",
+          :description => "Actor class for FsSecurityActions to fetch clients' X.509 certificates in DataNodes",
+          :type => 'string'
+
+attribute "hops/fs-security-actions/x509/get-path",
+          :description => "HTTP endpoint to fetch clients' X.509 certificates",
           :type => 'string'
 
 attribute "hops/format",
@@ -540,6 +600,10 @@ attribute "hops/yarn/cgroups_max_cpu_usage",
           :description => "max accumulated CPU usage of containers",
           :type => "string"
 
+attribute "hops/yarn/cgroups_strict_resource_usage",
+          :description => "Allows cpu usage limits to be hard or soft. When this setting is true, containers cannot use more CPU usage than allocated even if spare CPU is available.",
+          :type => "string"
+
 attribute "hops/yarnapp/home_dir",
           :description => "home directory for yarnapp user",
           :type => "string"
@@ -585,7 +649,7 @@ attribute "hops/nn/handler_count",
           :type => "string" 
 
 attribute "hops/retry_policy_spec",
-          :description => "Retry policy specification. For example '10000,6,60000,10' means retry 6 times with 10 sec delay and then retry 10 times with 1 min delay.",
+          :description => "Retry policy specification. For example '1.2.0,6,60000,10' means retry 6 times with 10 sec delay and then retry 10 times with 1 min delay.",
           :type => "string" 
 
 attribute "hops/retry_policy_enabled",
@@ -607,4 +671,16 @@ attribute "hops/kernel/overcommit_memory",
 
 attribute "hops/kernel/overcommit_ratio",
           :description => "vm.overcommit_ratio value",
+          :type => "string"
+
+attribute "hops/s3a/sse_algorithm",
+          :description => "Default server side encryption algorithm to use when writing to s3 buckets (default: empty)",
+          :type => "string"
+
+attribute "hops/s3a/sse_key",
+          :description => "Default Key to use when using S3 SSE-KMS (default: empty)",
+          :type => "string"
+
+attribute "hops/ndb/version",
+          :description => "version of ndb expected by hops, this is for development purpose and should be set to an empty string if the version expected by hops is the same as the version of ndb installed on the machine",
           :type => "string"
