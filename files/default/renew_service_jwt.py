@@ -15,7 +15,7 @@ if PY3:
 else:
     import urlparse
     
-HOPSWORKS_SERVICE_LOGIN = "hopsworks-api/api/auth/service"
+HOPSWORKS_SERVICE_LOGIN = "giotto-api/api/auth/service"
 HEADERS = {'Content-Type': 'application/x-www-form-urlencoded',
            'User-Agent': 'service_renew_py'}
 AUTH_HEADER = "Authorization"
