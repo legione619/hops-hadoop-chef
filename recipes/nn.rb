@@ -11,7 +11,7 @@ group node['hops']['secure_group'] do
   not_if { node['install']['external_users'].casecmp("true") == 0 }
 end
 
-file "#{node['hops']['conf_dir']}/dfs.exclude" do 
+file "#{node['hops']['conf_dir']}/dfs.exclude" do
   owner node['hops']['hdfs']['user']
   group node['hops']['group']
   mode "700"
@@ -19,8 +19,12 @@ file "#{node['hops']['conf_dir']}/dfs.exclude" do
 end
 
 deps = ""
+if service_discovery_enabled()
+  deps += "consul.service "
+end
+
 if exists_local("ndb", "mysqld")
-  deps = "mysqld.service "
+  deps += "mysqld.service "
 end
 
 if node['hops']['tls']['crl_enabled'].casecmp?("true") and exists_local("hopsworks", "default")
@@ -115,6 +119,36 @@ if node['kagent']['enabled'] == "true"
   end
 end
 
+if service_discovery_enabled()
+  # Register NameNode with Consul
+  if node['hops']['tls']['enabled'].casecmp?("true")
+    scheme = "https"
+    http_port = node['hops']['nn']['https']['port']
+  else
+    scheme = "http"
+    http_port = node['hops']['nn']['http_port']
+  end
+
+  template "#{node['hops']['bin_dir']}/consul/nn-health.sh" do
+    source "consul/nn-health.sh.erb"
+    owner node['hops']['hdfs']['user']
+    group node['hops']['group']
+    mode 0750
+    variables({
+      :scheme => scheme,
+      :http_port => http_port
+    })
+  end
+
+  consul_service "Registering NameNode with Consul" do
+    service_definition "consul/nn-consul.hcl.erb"
+    template_variables({
+      :http_port => http_port
+    })
+    action :register
+  end
+end
+
 ruby_block 'wait_until_nn_started' do
   block do
      sleep(10)
@@ -122,11 +156,11 @@ ruby_block 'wait_until_nn_started' do
   action :run
 end
 
-tmp_dirs   = [ "/tmp", node['hops']['hdfs']['user_home'], node['hops']['hdfs']['user_home'] + "/" + node['hops']['hdfs']['user'] ]
+dirs = [ "/tmp", node['hops']['hdfs']['user_home'], node['hops']['hdfs']['user_home'] + "/" + node['hops']['hdfs']['user'], node['hops']['hdfs']['apps_dir'] ]
 
 # Only the first NN needs to create the directories
 if my_ip.eql? node['hops']['nn']['private_ips'][0]
-  for d in tmp_dirs
+  for d in dirs
     hops_hdfs_directory d do
       action :create_as_superuser
       owner node['hops']['hdfs']['user']
@@ -162,7 +196,7 @@ if my_ip.eql? node['hops']['nn']['private_ips'][0]
 
   ts = Time.new.strftime("%Y_%m_%d_%H_%M")
 
-  if node['ndb']['nvme']['undofile_size'] != ""  
+  if node['ndb']['nvme']['undofile_size'] != ""
     bash 'add_disk_undo_file' do
       user node['ndb']['user']
       code <<-EOF
@@ -183,7 +217,7 @@ if my_ip.eql? node['hops']['nn']['private_ips'][0]
   end
 
 
-  if node['ndb']['nvme']['logfile_size'] != ""    
+  if node['ndb']['nvme']['logfile_size'] != ""
     bash 'add_disk_data_file' do
       user node['ndb']['user']
       timeout 7200
@@ -202,7 +236,16 @@ if my_ip.eql? node['hops']['nn']['private_ips'][0]
         fi
       EOF
     end
-  end    
+  end
 
-  
+  if node['hops']['nn']['root_dir_storage_policy'] != ""
+    exec = "#{node['hops']['bin_dir']}/hdfs storagepolicies -setStoragePolicy -path / -policy "
+    bash 'set_root_storage_plicy' do
+      user node['hops']['hdfs']['user']
+      code <<-EOF
+        #{exec} "#{node['hops']['nn']['root_dir_storage_policy']}\"
+      EOF
+    end
+  end
+
 end

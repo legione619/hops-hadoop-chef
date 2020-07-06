@@ -19,8 +19,11 @@ cookbook_file "#{node['hops']['conf_dir']}/datanode.yaml" do
 end
 
 deps = ""
+if service_discovery_enabled()
+  deps += "consul.service "
+end
 if exists_local("hops", "nn") 
-  deps = "namenode.service"
+  deps += "namenode.service "
 end  
 
 service_name="datanode"
@@ -45,6 +48,10 @@ if node['hops']['systemd'] == "true"
     ignore_failure true
   end
 
+  rpc_namenode_fqdn = my_private_ip()
+  if service_discovery_enabled()
+    rpc_namenode_fqdn = consul_helper.get_service_fqdn("rpc.namenode")
+  end
   
   template systemd_script do
     source "#{service_name}.service.erb"
@@ -52,7 +59,8 @@ if node['hops']['systemd'] == "true"
     group "root"
     mode 0664
     variables({
-              :deps => deps
+                :deps => deps,
+                :nn_rpc_endpoint => rpc_namenode_fqdn
               })
 if node['services']['enabled'] == "true"
     notifies :enable, "service[#{service_name}]"

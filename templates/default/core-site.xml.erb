@@ -22,7 +22,7 @@
 
   <property>
     <name>dfs.namenodes.rpc.addresses</name>
-    <value><%= @allNNs %></value>
+    <value><%= @nn_rpc_endpoint %></value>
     <description>HopsFS-specific list of comma-separated host:port pairs for NameNodes.</description>
   </property>
 
@@ -51,6 +51,11 @@
     </description>
   </property>
 
+  <property>
+    <name>hops.service-discovery.enabled</name>
+    <value><%= @service_discovery_enabled %></value>
+    <description>Flag to get address from Service Discovery instead of configuration file.</description>
+  </property>
 
   <property>
     <name>hadoop.proxyuser.<%= node['hops']['hdfs']['user'] %>.hosts</name>
@@ -358,6 +363,24 @@
     <name>fs.s3a.server-side-encryption.key</name>
     <value><%= node['hops']['s3a']['sse_key'] %></value>
   </property>
+<% end -%>
+
+<% if node['install']['cloud'].eql? "azure" -%>
+  <property>
+    <name>fs.adl.oauth2.access.token.provider.type</name>
+    <value>RefreshToken</value>
+  </property>
+
+  <property>
+    <name>fs.adl.oauth2.client.id</name>
+    <value></value>
+  </property>
+
+  <property>
+    <name>fs.adl.oauth2.refresh.token</name>
+    <value></value>
+  </property>
+  
 <% end -%>
 
 </configuration>

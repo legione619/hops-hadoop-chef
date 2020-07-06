@@ -4,7 +4,7 @@ maintainer_email "jdowling@kth.se"
 license          "Apache v2.0"
 description      'Installs/Configures the Hops distribution'
 long_description IO.read(File.join(File.dirname(__FILE__), 'README.md'))
-version          "1.2.0"
+version          "1.3.0"
 source_url       "https://github.com/hopshadoop/hops-hadoop-chef"
 
 
@@ -22,13 +22,16 @@ recipe            "hops::client", "Installs libaries and configuration files for
 recipe            "hops::purge", "Removes all hops-hadoop files and dirs and ndb-dal, but doesnt drop hops db from NDB"
 recipe            "hops::_config", "Internal recipe for setting config values"
 
-depends 'java'
+depends 'java', '~> 7.0.0'
+depends 'magic_shell', '~> 1.0.0'
+depends 'sysctl', '~> 1.0.3'
+depends 'cmake', '~> 0.3.0'
 depends 'kagent'
 depends 'ndb'
-depends 'magic_shell'
-depends 'sysctl'
-depends 'cmake'
+depends 'conda'
 depends 'kzookeeper'
+depends 'elastic'
+depends 'consul'
 
 %w{ ubuntu debian rhel centos }.each do |os|
   supports os
@@ -402,7 +405,7 @@ attribute "hops/hdfs/blocksize",
           :type => 'string'
 
 attribute "hops/hdfs/umask",
-          :description => "Set the default HDFS umask (default: 0022).",
+          :description => "Set the default HDFS umask (default: 0027).",
           :type => 'string'
 
 attribute "hops/dfs/inodeid/batchsize",
@@ -475,6 +478,34 @@ attribute "hops/data_dir",
 
 attribute "hops/dn/data_dir_permissions",
           :description => "The permissions for the directory in which Hadoop's DataNodes store their data (default: 700)",
+          :type => 'string'
+
+attribute "hops/enable_cloud_storage",
+          :description => "Enable cloud storage on the DataNodes.",
+          :type => 'string'
+
+attribute "hops/cloud_provider",
+          :description => "Name of the cloud provider. Default: AWS",
+          :type => 'string'
+
+attribute "hops/aws_s3_region",
+          :description => "AWS S3 Region. Default is eu-west-1",
+          :type => 'string'
+
+attribute "hops/cloud_bypass_disk_cache",
+          :description => "Bypass disk cache",
+          :type => 'string'
+
+attribute "hops/cloud_max_upload_threads",
+          :description => "Max number of threads for uploading blocks to cloud",
+          :type => 'string'
+
+attribute "hops/cloud_store_small_files_in_db",
+          :description => "Enable/Disable storing small files in NDB for CLOUD storage policy",
+          :type => 'string'
+
+attribute "hops/aws_s3_bucket",
+          :description => "S3 bucket used to store file system blocks",
           :type => 'string'
 
 attribute "hops/yarn/nodemanager_hb_ms",
@@ -646,15 +677,19 @@ attribute "hops/hdfs/quota_enabled",
 
 attribute "hops/nn/handler_count",
           :description => "Number of RPC handlers",
-          :type => "string" 
+          :type => "string"
+
+attribute "hops/nn/root_dir_storage_policy",
+          :description => "Storage policy for root directory",
+          :type => "string"
 
 attribute "hops/retry_policy_spec",
-          :description => "Retry policy specification. For example '1.2.0,6,60000,10' means retry 6 times with 10 sec delay and then retry 10 times with 1 min delay.",
-          :type => "string" 
+          :description => "Retry policy specification. For example '1.3.0,6,60000,10' means retry 6 times with 10 sec delay and then retry 10 times with 1 min delay.",
+          :type => "string"
 
 attribute "hops/retry_policy_enabled",
           :description => "Enable retry upon connection failure",
-          :type => "string" 
+          :type => "string"
 
 # Kernel tuning parameters
 attribute "hops/kernel/somaxconn",
@@ -684,3 +719,31 @@ attribute "hops/s3a/sse_key",
 attribute "hops/ndb/version",
           :description => "version of ndb expected by hops, this is for development purpose and should be set to an empty string if the version expected by hops is the same as the version of ndb installed on the machine",
           :type => "string"
+
+attribute "hops/adl_v1_version",
+          :description => "Version of the ADL v1 Hadoop connector (jar file).",
+          :type => "string"
+
+attribute "hops/nn/http_port",
+          :description => "The namenode http server port.",
+          :type => 'string'
+
+attribute "hops/dn/http_port",
+          :description => "The datanode http server port.",
+          :type => 'string'
+
+attribute "hops/dn/port",
+          :description => "The datanode server port for data transfer.",
+          :type => 'string'
+
+attribute "hops/dn/ipc_port",
+          :description => "The datanode ipc server port.",
+          :type => 'string'
+
+attribute "hops/dn/https/address",
+          :description => "the address on which the datanode should listen for https requests",
+          :type => 'string'
+
+attribute "hops/nn/https/port",
+          :description => "The namenode http server port.",
+          :type => 'string'

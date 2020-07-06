@@ -3,8 +3,11 @@ include_recipe "hops::default"
 template_ssl_server()
 
 deps = ""
+if service_discovery_enabled()
+  deps += "consul.service "
+end
 if exists_local("hops", "rm")
-  deps = "resourcemanager.service"
+  deps += "resourcemanager.service "
 end
 
 yarn_service="nm"
@@ -29,13 +32,28 @@ end
 
 
 
-if node['install']['cloud'].casecmp?("gce") == 0
+if node['install']['cloud'].casecmp?("gcp") == 0
   
-  gcs_url = node['hops']['gcs_url']
-  gcs_jar = File.basename(gcs_url)
+  gcp_url = node['hops']['gcp_url']
+  gcp_jar = File.basename(gcp_url)
   
-  remote_file "#{node['hops']['base_dir']}/share/hadoop/yarn/lib/#{gcs_jar}" do
-    source gcs_url
+  remote_file "#{node['hops']['base_dir']}/share/hadoop/yarn/lib/#{gcp_jar}" do
+    source gcp_url
+    owner node['hops']['yarn']['user']
+    group node['hops']['group']
+    mode "0755"
+  # TODO - checksum
+    action :create_if_missing
+  end
+end
+
+if node['install']['cloud'].casecmp?("azure") == 0
+  
+  adl_v1_url = node['hops']['adl_v1_url']
+  adl_v1_jar = File.basename(adl_v1_url)
+  
+  remote_file "#{node['hops']['base_dir']}/share/hadoop/yarn/lib/#{adl_v1_jar}" do
+    source adl_v1_url
     owner node['hops']['yarn']['user']
     group node['hops']['group']
     mode "0755"
@@ -45,8 +63,10 @@ if node['install']['cloud'].casecmp?("gce") == 0
 end
 
 
-nvidia_url = node['nvidia']['download_url']
-nvidia_jar = File.basename(nvidia_url)
+
+nvidia_url = node['nvidia']['download_url'].sub("-EE", "")
+# remove the EE prefix from the version as there is only one nvidiajar for both Hops CE and EE
+nvidia_jar = File.basename(nvidia_url).sub("-EE", "")
 
 remote_file "#{node['hops']['base_dir']}/share/hadoop/yarn/lib/#{nvidia_jar}" do
   source nvidia_url
@@ -58,9 +78,10 @@ remote_file "#{node['hops']['base_dir']}/share/hadoop/yarn/lib/#{nvidia_jar}" do
   action :create
 end
 
-libhopsnvml = File.basename(node['hops']['libnvml_url'])
+libnvml_url = node['hops']['libnvml_url'].sub("-EE", "")
+libhopsnvml = File.basename(libnvml_url)
 remote_file "#{node['hops']['base_dir']}/lib/native/#{libhopsnvml}" do
-  source node['hops']['libnvml_url']
+  source libnvml_url
   owner node['hops']['yarn']['user']
   group node['hops']['group']
   mode "0755"
@@ -74,8 +95,8 @@ link "#{node['hops']['base_dir']}/lib/native/libhopsnvml.so" do
   to "#{node['hops']['base_dir']}/lib/native/#{libhopsnvml}"
 end
 
-amd_url = node['amd']['download_url']
-amd_jar = File.basename(amd_url)
+amd_url = node['amd']['download_url'].sub("-EE", "")
+amd_jar = File.basename(amd_url).sub("-EE", "")
 
 remote_file "#{node['hops']['base_dir']}/share/hadoop/yarn/lib/#{amd_jar}" do
   source amd_url
@@ -87,10 +108,10 @@ remote_file "#{node['hops']['base_dir']}/share/hadoop/yarn/lib/#{amd_jar}" do
   action :create
 end
 
-
-libhopsrocm = File.basename(node['hops']['librocm_url'])
+librocm_url = node['hops']['librocm_url'].sub("-EE", "")
+libhopsrocm = File.basename(librocm_url)
 remote_file "#{node['hops']['base_dir']}/lib/native/#{libhopsrocm}" do
-  source node['hops']['librocm_url']
+  source librocm_url
   owner node['hops']['yarn']['user']
   group node['hops']['group']
   mode "0755"
@@ -131,13 +152,20 @@ if node['hops']['systemd'] == "true"
     ignore_failure true
   end
 
+  rpc_resourcemanager_fqdn = my_private_ip()
+  if service_discovery_enabled()
+    rpc_resourcemanager_fqdn = consul_helper.get_service_fqdn("rpc.resourcemanager")
+  end
+
+
   template systemd_script do
     source "#{service_name}.service.erb"
     owner "root"
     group "root"
     mode 0664
     variables({
-              :deps => deps
+                :deps => deps,
+                :rm_rpc_endpoint => rpc_resourcemanager_fqdn
               })
 if node['services']['enabled'] == "true"
     notifies :enable, resources(:service => "#{service_name}")
@@ -211,5 +239,17 @@ if node.attribute?('tensorflow') == true
   end
 end
 
+if service_discovery_enabled()
+  # Register NodeManager with Consul
+  template "#{node['hops']['bin_dir']}/consul/nm-health.sh" do
+    source "consul/nm-health.sh.erb"
+    owner node['hops']['yarn']['user']
+    group node['hops']['group']
+    mode 0750
+  end
 
-
+  consul_service "Registering NodeManager with Consul" do
+    service_definition "consul/nm-consul.hcl.erb"
+    action :register
+  end
+end

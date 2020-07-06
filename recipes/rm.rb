@@ -21,8 +21,11 @@ template "#{node['hops']['conf_dir']}/rm-jmxremote.password" do
 end
 
 deps = ""
+if service_discovery_enabled()
+  deps += "consul.service "
+end
 if exists_local("ndb", "mysqld")
-  deps = "mysqld.service "
+  deps += "mysqld.service "
 end
 
 if node['hops']['tls']['crl_enabled'].casecmp?("true") and exists_local("hopsworks", "default")
@@ -150,12 +153,37 @@ for d in tmp_dirs
   end
 end
 
-tmp_dirs   = [node['hops']['yarn']['nodemanager']['remote_app_log_dir'], "#{node['hops']['hdfs']['user_home']}/#{node['hops']['yarn']['user']}"]
-for d in tmp_dirs
-  hops_hdfs_directory d do
-    action :create_as_superuser
-    owner node['hops']['yarn']['user']
+hops_hdfs_directory "#{node['hops']['hdfs']['user_home']}/#{node['hops']['yarn']['user']}" do
+  action :create_as_superuser
+  owner node['hops']['yarn']['user']
+  group node['hops']['group']
+  mode "1775"
+end
+
+hops_hdfs_directory node['hops']['yarn']['nodemanager']['remote_app_log_dir'] do
+  action :create_as_superuser
+  owner node['hops']['yarn']['user']
+  group node['hops']['group']
+  mode "1773"
+end
+
+if service_discovery_enabled()
+  # Register ResourceManager with Consul
+  template "#{node['hops']['bin_dir']}/consul/rm-health.sh" do
+    source "consul/rm-health.sh.erb"
+    owner node['hops']['rm']['user']
     group node['hops']['group']
-    mode "1773"
+    mode 0750
+  end
+
+  ha_ids = (0...node['hops']['rm']['private_ips'].size()).to_a()
+  my_id = node['hops']['rm']['private_ips'].index(my_private_ip())
+
+  consul_service "Registering ResourceManager with Consul" do
+    service_definition "consul/rm-consul.hcl.erb"
+    template_variables({
+      :id => my_id
+    })
+    action :register
   end
 end

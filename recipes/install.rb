@@ -1,6 +1,10 @@
 include_recipe "hops::_config"
 include_recipe "java"
 
+if node['hops']['nn']['direct_memory_size'].to_i < node['hops']['nn']['heap_size'].to_i
+  raise "Invalid Configuration. Set Java DirectByteBuffer memory as high as Java heap size otherwise, the NNs might experience severe GC pauses."
+end
+
 group node['kagent']['certs_group'] do
   action :create
   not_if "getent group #{node['kagent']['certs_group']}"
@@ -221,7 +225,8 @@ end
 if "#{node['hops']['dn']['data_dir']}".include? ","
   dirs = node['hops']['dn']['data_dir'].split(",")
   for d in dirs do
-    dir = d.gsub("file://","")
+    dir = d.gsub(/\[.*\]/, "") #remove [HOT], [CLOUD] storage type tags
+    dir = dir.gsub("file://","")
     bash 'chown_datadirs_if_exist' do
       user "root"
       code <<-EOH
@@ -237,7 +242,8 @@ if "#{node['hops']['dn']['data_dir']}".include? ","
    end
 else
   ad=node['hops']['dn']['data_dir']
-  ddir=ad.gsub("file://","")
+  ddir = ad.gsub(/\[.*\]/, "") #remove [HOT], [CLOUD] storage type tags
+  ddir = ddir.gsub("file://","")
   directory ddir do
     owner node['hops']['hdfs']['user']
     group node['hops']['group']
@@ -268,6 +274,8 @@ remote_file cached_package_filename do
   retries 2
   owner node['hops']['hdfs']['user']
   group node['hops']['group']
+  headers get_ee_basic_auth_header()
+  sensitive true
   mode "0755"
   ignore_failure true
   # TODO - checksum
@@ -314,10 +322,25 @@ directory node['hops']['logs_dir'] do
   action :create
 end
 
+# Touch file with correct ownership and permission
+file "#{node['hops']['logs_dir']}/hadoop.log" do
+  owner node['hops']['hdfs']['user']
+  group node['hops']['group']
+  mode "0770"
+  action :create_if_missing
+end
+
 directory node['hops']['tmp_dir'] do
   owner node['hops']['hdfs']['user']
   group node['hops']['group']
   mode "1770"
+  action :create
+end
+
+directory "#{node['hops']['bin_dir']}/consul" do
+  owner node['hops']['hdfs']['user']
+  group node['hops']['group']
+  mode "0750"
   action :create
 end
 

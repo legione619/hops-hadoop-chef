@@ -3,8 +3,8 @@ include_attribute "kagent"
 include_attribute "ndb"
 include_attribute "kzookeeper"
 
-default['hops']['versions']                    = "2.8.2.2,2.8.2.3,2.8.2.4,2.8.2.5,2.8.2.6,2.8.2.7,2.8.2.8"
-default['hops']['version']                     = "2.8.2.9"
+default['hops']['versions']                    = "2.8.2.2,2.8.2.3,2.8.2.4,2.8.2.5,2.8.2.6,2.8.2.7,2.8.2.8,2.8.2.9"
+default['hops']['version']                     = "2.8.2.10-RC1"
 
 default['hops']['hdfs']['user']                = node['install']['user'].empty? ? "hdfs" : node['install']['user']
 default['hops']['group']                       = node['install']['user'].empty? ? "hadoop" : node['install']['user']
@@ -35,16 +35,27 @@ default['hops']['conf_dir_parent']             = node['hops']['base_dir'] + "/et
 default['hops']['conf_dir']                    = node['hops']['conf_dir_parent'] + "/hadoop"
 default['hops']['share_dir']                    = node['hops']['base_dir'] + "/share/hadoop"
 
-default['hops']['dn']['data_dir']              = "file://" + node['hops']['data_dir'] + "/hdfs/dn"
-default['hops']['dn']['data_dir_permissions']  = '700'
-default['hops']['nn']['name_dir']              = "file://" + node['hops']['data_dir'] + "/hdfs/nn"
+default['hops']['enable_cloud_storage']        = "false"
+default['hops']['cloud_provider']              = node["install"]["cloud"]
+default['hops']['aws_s3_region']               = "eu-west-1"
+default['hops']['aws_s3_bucket']               = "hopsfs.bucket"
+default['hops']['cloud_bypass_disk_cache']         = "false"
+default['hops']['cloud_max_upload_threads']        = "20"
+default['hops']['cloud_store_small_files_in_db']   = "true"
+default['hops']['nn']['root_dir_storage_policy']       = ""
+
+
+default['hops']['dn']['data_dir']                       = "file://" + node['hops']['data_dir'] + "/hdfs/dn"
+default['hops']['dn']['data_dir_permissions']           = '700'
+default['hops']['nn']['name_dir']                       = "file://" + node['hops']['data_dir'] + "/hdfs/nn"
 
 default['hops']['yarn']['nodemanager_log_dir']               = node['hops']['logs_dir'] + "/userlogs"
 default['hops']['yarn']['nodemanager_recovery_dir']          = node['hops']['data_dir'] + "/yarn-nm-recovery"
 
 default['hops']['hdfs']['user_home']           = "/user"
+default['hops']['hdfs']['apps_dir']            = "/apps"
 default['hops']['hdfs']['blocksize']           = "134217728"
-default['hops']['hdfs']['umask']               = "0022"
+default['hops']['hdfs']['umask']               = "0027"
 
 
 
@@ -57,6 +68,8 @@ default['hops']['hadoop_src_url']              = "https://archive.apache.org/dis
 default['hops']['nn']['http_port']             = 50070
 default['hops']['dn']['http_port']             = 50075
 default['hops']['nn']['port']                  = 8020
+default['hops']['dn']['port']                  = 50010
+default['hops']['dn']['ipc_port']              = 50020
 
 default['hops']['nn']['format_options']        = "-format -nonInteractive"
 
@@ -87,7 +100,7 @@ default['hops']['yarn']['vmem_check']          = false
 end
 default['hops']['yarn']['pmem_check']          = "true"
 
-default['hops']['yarn']['detect-hardware-capabilities'] = "false"
+default['hops']['yarn']['detect-hardware-capabilities'] = "true"
 default['hops']['yarn']['logical-processors-as-cores']  = "true"
 default['hops']['yarn']['pcores-vcores-multiplier']     = "0.9"
 default['hops']['yarn']['system-reserved-memory-mb']    = "-1"
@@ -96,7 +109,7 @@ default['hops']['yarn']['vcores']              = 8
 default['hops']['yarn']['min_vcores']          = 1
 default['hops']['yarn']['max_vcores']          = 8
 default['hops']['yarn']['log_aggregation']     = "true"
-default['hops']['yarn']['nodemanager']['remote_app_log_dir'] = node['hops']['hdfs']['user_home'] + "/" + node['hops']['yarn']['user'] + "/logs"
+default['hops']['yarn']['nodemanager']['remote_app_log_dir'] = "#{node['hops']['hdfs']['user_home']}/#{node['hops']['yarn']['user']}/logs"
 default['hops']['yarn']['log_retain_secs']     = 86400
 default['hops']['yarn']['log_retain_check']    = 100
 default['hops']['yarn']['log_roll_interval']    = 3600
@@ -184,8 +197,7 @@ default['hops']['limits']['nofile']            = '32768'
 default['hops']['limits']['nproc']             = '65536'
 default['hops']['limits']['memory_limit']      = '100000'
 
-default['hops']['logging_level']               = "WARN"
-default['hops']['nn']['direct_memory_size']    = "250"
+default['hops']['logging_level']               = "INFO"
 default['hops']['ha_enabled']                  = "false"
 
 default['hops']['systemd']                     = "true"
@@ -241,8 +253,8 @@ default['hops']['rm']['https']['port'] 	    = "8090"
 default['hops']['nm']['https']['port']      = "45443"
 
 default['hops']['yarn']['resource_tracker'] = "false"
-default['hops']['nn']['direct_memory_size'] = 50
-default['hops']['nn']['heap_size']          = 500
+default['hops']['nn']['direct_memory_size'] = 1000
+default['hops']['nn']['heap_size']          = 1000
 
 default['hops']['nn']['public_ips']         = ['10.0.2.15']
 default['hops']['nn']['private_ips']        = ['10.0.2.15']
@@ -303,12 +315,11 @@ default['hops']['yarn']['rm_heapsize_mbs']                   = 1000
 #hdfs-site.xml
 default['hops']['dfs']['https']['enable']                    = "true"
 default['hops']['dfs']['http']['policy']   		             = "HTTPS_ONLY"
-default['hops']['dfs']['datanode']['https']['address'] 	     = "0.0.0.0:50475"
-default['hops']['dfs']['https']['port']                      = "50470"
-default['hops']['dfs']['namenode']["https-address"]   	     = "0.0.0.0:50470"
+default['hops']['dn']['https']['address'] 	            = "0.0.0.0:50475"
+default['hops']['nn']['https']['port']                      = "50470"
 
-default['hops']['dfs']['inodeid']['batchsize']                         = "100000"
-default['hops']['dfs']['blockid']['batchsize']                         = "100000"
+default['hops']['dfs']['inodeid']['batchsize']              = "10000"
+default['hops']['dfs']['blockid']['batchsize']              = "10000"
 
 default['hops']['dfs']['processReport']['batchsize']                   = "10"
 default['hops']['dfs']['misreplicated']['batchsize']                   = "500"
@@ -339,7 +350,7 @@ default['hops']['yarn']['container_executor']                = "org.apache.hadoo
 default['hops']['yarn']['cgroups']                        = "true"
 default['hops']['yarn']['cgroups_deletion_timeout']       = "5000"
 default['hops']['yarn']['cgroups_max_cpu_usage']          = "90"
-default['hops']['yarn']['cgroups_strict_resource_usage']  = "true"
+default['hops']['yarn']['cgroups_strict_resource_usage']  = "false"
 
 #ssl-server.xml
 default['hops']['ssl']['server']['keystore']['password']   		= node['hopsworks']['master']['password']
@@ -459,7 +470,7 @@ default['hops']['nn']['private_ips_domainIds']        = {}
 default['hops']['dn']['private_ips_domainIds']        = {}
 default['hops']['topology']                           = "false"
 
-# Monitoring 
+# Monitoring
 default['hops']['jmx']['prometheus_exporter']['version']  = "0.12.0"
 default['hops']['jmx']['prometheus_exporter']['url']      = "#{node['download_url']}/prometheus/jmx_prometheus_javaagent-#{node['hops']['jmx']['prometheus_exporter']['version']}.jar"
 
@@ -473,7 +484,10 @@ default['hops']['nn']['enable_retrycache']            = "true"
 default['hops']['hdfs']['quota_enabled']              = "true"
 default['hops']['nn']['handler_count']                = 120
 
-default['hops']['gcs_url']                            = node['hops']['root_url'] + "/gcs-connector-hadoop2-latest.jar"
+default['hops']['gcp_url']                            = node['hops']['root_url'] + "/gcs-connector-hadoop2-latest.jar"
 
 default['hops']['s3a']['sse_algorithm']        = ""
 default['hops']['s3a']['sse_key']              = ""
+
+default['hops']['adl_v1_version']                     = "2.3.8"
+default['hops']['adl_v1_url']                         = node['hops']['root_url'] + "/azure-data-lake-store-sdk-" + node['hops']['adl_v1_version'] + ".jar"
