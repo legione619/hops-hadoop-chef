@@ -2,6 +2,18 @@ include_recipe "hops::default"
 
 template_ssl_server()
 
+# DataNode and NameNode run as the same user
+# Generate certificate only once
+unless exists_local("hops", "nn")
+  crypto_dir = x509_helper.get_crypto_dir(node['hops']['hdfs']['user'])
+  kagent_hopsify "Generate x.509" do
+    user node['hops']['hdfs']['user']
+    crypto_directory crypto_dir
+    action :generate_x509
+    not_if { node["kagent"]["enabled"] == "false" }
+  end
+end
+
 for script in node['hops']['dn']['scripts']
   template "#{node['hops']['sbin_dir']}/#{script}" do
     source "#{script}.erb"
@@ -115,5 +127,20 @@ if node['kagent']['enabled'] == "true"
     service "HDFS"
     log_file "#{node['hops']['logs_dir']}/hadoop-#{node['hops']['hdfs']['user']}-#{service_name}-#{node['hostname']}.log"
     config_file "#{node['hops']['conf_dir']}/hdfs-site.xml"
+  end
+end
+
+if service_discovery_enabled()
+  # Register DataNode with Consul
+  template "#{node['hops']['bin_dir']}/consul/dn-health.sh" do
+    source "consul/dn-health.sh.erb"
+    owner node['hops']['hdfs']['user']
+    group node['hops']['group']
+    mode 0750
+  end
+
+  consul_service "Registering DataNode with Consul" do
+    service_definition "consul/dn-consul.hcl.erb"
+    action :register
   end
 end

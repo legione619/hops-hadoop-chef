@@ -1,16 +1,15 @@
+require 'etc'
+
 include_recipe "hops::_config"
 include_recipe "java"
+
+if node['hops']['docker']['enabled'].eql?("true")
+  include_recipe "hops::docker"
+end
 
 if node['hops']['nn']['direct_memory_size'].to_i < node['hops']['nn']['heap_size'].to_i
   raise "Invalid Configuration. Set Java DirectByteBuffer memory as high as Java heap size otherwise, the NNs might experience severe GC pauses."
 end
-
-group node['kagent']['certs_group'] do
-  action :create
-  not_if "getent group #{node['kagent']['certs_group']}"
-  not_if { node['install']['external_users'].casecmp("true") == 0 }
-end
-
 
 magic_shell_environment 'LD_LIBRARY_PATH' do
   value "#{node['hops']['base_dir']}/lib/native:$LD_LIBRARY_PATH"
@@ -35,6 +34,14 @@ sysctl_param 'net.core.somaxconn' do
   value node['hops']['kernel']['somaxconn']
 end
 
+group node["kagent"]["certs_group"] do
+  action :manage
+  append true
+  excluded_members [node['hops']['hdfs']['user'], node['hops']['yarn']['user'], node['hops']['rm']['user'], node['hops']['mr']['user']]
+  not_if { node['install']['external_users'].casecmp("true") == 0 }
+  only_if { conda_helpers.is_upgrade }
+end
+
 #
 # http://www.slideshare.net/vgogate/hadoop-configuration-performance-tuning
 #
@@ -47,21 +54,47 @@ if node['platform_family'].eql?("redhat")
   end
 end
 
+# We need to change the group from the previous ID to the new one during an upgrade
+bash 'chgrp' do 
+  user "root"
+  code <<-EOH
+    old_gid=`cat /etc/group | grep hadoop | awk '{split($0,a,":"); print a[3]}'`
+    if [ "$old_gid" != "#{node['hops']['group_id']}" ];
+    then
+      find #{node['install']['dir']} -group $old_gid -exec chgrp #{node['hops']['group_id']} {} \\;
+    fi 
+  EOH
+  only_if { !node['install']['current_version'].eql?("") && 
+    Gem::Version.new(node['install']['current_version']) <= Gem::Version.new('1.3.0')}
+  not_if  { node['install']['external_users'].casecmp("true") == 0 }
+end
+
+# we need to fix the gid to match the one in the docker image
+# here we re-create the group. users could have been added before this point
+# so we need to make sure we add them back to the new group
+current_hadoop_members = []
+ruby_block 'find current hadoop group members' do
+  block do
+    current_hadoop_members = Etc.getgrnam(node['hops']['group']).mem
+  end
+  action :run
+  only_if "getent group #{node['hops']['group']}"
+end
 
 group node['hops']['group'] do
+  gid node['hops']['group_id']
+  members lazy { current_hadoop_members }
   action :create
-  not_if "getent group #{node['hops']['group']}"
   not_if { node['install']['external_users'].casecmp("true") == 0 }
 end
 
 group node['hops']['secure_group'] do
   action :create
-  not_if "getent group #{node['hops']['secure_group']}"
   not_if { node['install']['external_users'].casecmp("true") == 0 }
 end
 
 user node['hops']['hdfs']['user'] do
-  home "/home/#{node['hops']['hdfs']['user']}"
+  home node['hops']['hdfs']['user-home']
   gid node['hops']['group']
   system true
   shell "/bin/bash"
@@ -72,38 +105,49 @@ user node['hops']['hdfs']['user'] do
 end
 
 user node['hops']['yarn']['user'] do
+  home node['hops']['yarn']['user-home']
   gid node['hops']['group']
   system true
   shell "/bin/bash"
+  manage_home true
   action :create
   not_if "getent passwd #{node['hops']['yarn']['user']}"
   not_if { node['install']['external_users'].casecmp("true") == 0 }
 end
 
 user node['hops']['mr']['user'] do
+  home node['hops']['mr']['user-home']
   gid node['hops']['group']
   system true
   shell "/bin/bash"
+  manage_home true
   action :create
   not_if "getent passwd #{node['hops']['mr']['user']}"
   not_if { node['install']['external_users'].casecmp("true") == 0 }
 end
 
+# we need to fix the uid to match the one in the docker image
+# during an upgrade the user id might not match what we expect. 
+# the :create will re-create the user with a different id
+# yarnapp doesn't own anything on the fs (at least not in /srv/hops)
+# so it's safe to remove and re-create the user
 user node['hops']['yarnapp']['user'] do
+  uid node['hops']['yarnapp']['uid']
   gid node['hops']['group']
   system true
   manage_home true
   shell "/bin/bash"
   action :create
-  not_if "getent passwd #{node['hops']['yarnapp']['user']}"
   not_if { node['install']['external_users'].casecmp("true") == 0 }
 end
 
 user node['hops']['rm']['user'] do
+  home node['hops']['rm']['user-home']
   gid node['hops']['secure_group']
   system true
   shell "/bin/bash"
   action :create
+  manage_home true
   not_if "getent passwd #{node['hops']['rm']['user']}"
   not_if { node['install']['external_users'].casecmp("true") == 0 }
 end
@@ -129,18 +173,13 @@ group node['hops']['group'] do
   not_if { node['install']['external_users'].casecmp("true") == 0 }
 end
 
-group node['kagent']['certs_group'] do
-  action :modify
-  members [node['hops']['hdfs']['user'], node['hops']['yarn']['user'], node['hops']['rm']['user'], node['hops']['mr']['user']]
-  append true
-  not_if { node['install']['external_users'].casecmp("true") == 0 }
-end
-
 case node['platform_family']
 when 'debian'
   package 'libsnappy1v5'
 when 'rhel'
   package 'snappy'
+  # bind-utils is needed to start the datanode, if HopsFS is installed without Hopsworks
+  package 'bind-utils'
 end
 
 if node['hops']['native_libraries'].eql? "true"
@@ -430,8 +469,6 @@ magic_shell_environment 'HADOOP_PID_DIR' do
 end
 
 
-Chef::Log.info "Number of gpus set was: #{node['hops']['yarn']['gpus']}"
-
 rm_private_ip = private_recipe_ip("hops","rm")
 
 begin
@@ -505,7 +542,7 @@ end
 cookbook_file "#{node['hops']['sbin_dir']}/renew_service_jwt.py" do
   source "renew_service_jwt.py"
   owner node['hops']['hdfs']['user']
-  group node['kagent']['certs_group']
+  group node['hops']['secure_group']
   mode "0700"
   action :create
 end
@@ -513,7 +550,7 @@ end
 template "#{node['hops']['sbin_dir']}/conda_renew_service_jwt.sh" do
   source "conda_renew_service_jwt.sh.erb"
   owner node['hops']['hdfs']['user']
-  group node['hops']['certs_group']
+  group node['hops']['secure_group']
   mode "0700"
   action :create
 end

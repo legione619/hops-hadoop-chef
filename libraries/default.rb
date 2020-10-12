@@ -18,11 +18,9 @@ module Hops
       template "#{node['hops']['conf_dir']}/ssl-server.xml" do
         source "ssl-server.xml.erb"
         owner node['hops']['hdfs']['user']
-        group node['kagent']['certs_group']
+        group node['hops']['secure_group']
         mode "770"
         variables({
-                    :kstore => "#{node['kagent']['keystore_dir']}/#{fqdn}__kstore.jks",
-                    :tstore => "#{node['kagent']['keystore_dir']}/#{fqdn}__tstore.jks",
                     :master_token => master_token,
                     :renew_tokens => renew_tokens
                   })
@@ -30,10 +28,6 @@ module Hops
       end
     end
     
-    def service_discovery_enabled()
-      exists_local('consul', 'master') or exists_local('consul', 'slave')
-    end
-
     def get_hops_version(hops_version=nil)
       # Set Hops EE version
       if hops_version.nil?

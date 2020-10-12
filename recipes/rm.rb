@@ -3,14 +3,13 @@ include_recipe "hops::default"
 template_ssl_server()
 ndb_connectstring()
 
-template "#{node['hops']['conf_dir']}/RM_EventAPIConfig.ini" do
-  source "RM_EventAPIConfig.ini.erb"
-  owner node['hops']['rm']['user']
-  group node['hops']['group']
-  mode "750"
-  variables({
-    :ndb_connectstring => node['ndb']['connectstring']
-  })
+crypto_dir = x509_helper.get_crypto_dir(node['hops']['rm']['user'])
+kagent_hopsify "Generate x.509" do
+  user node['hops']['rm']['user']
+  crypto_directory crypto_dir
+  common_name consul_helper.get_service_fqdn("resourcemanager")
+  action :generate_x509
+  not_if { node["kagent"]["enabled"] == "false" }
 end
 
 template "#{node['hops']['conf_dir']}/rm-jmxremote.password" do
@@ -47,9 +46,16 @@ for script in node['hops']['yarn']['scripts']
   template "#{node['hops']['home']}/sbin/#{script}-#{yarn_service}.sh" do
     source "#{script}-#{yarn_service}.sh.erb"
     owner node['hops']['rm']['user']
-     group node['hops']['secure_group']
+    group node['hops']['secure_group']
     mode 0750
   end
+end
+
+file "#{node['hops']['conf_dir']}/yarn_exclude_nodes.xml" do 
+  owner node['hops']['rm']['user']
+  group node['hops']['group']
+  mode "700"
+  content '<?xml version="1.0"?><hosts/>'
 end
 
 cookbook_file "#{node['hops']['conf_dir']}/resourcemanager.yaml" do 

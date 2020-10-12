@@ -1,5 +1,12 @@
 include_recipe "hops::default"
 
+crypto_dir = x509_helper.get_crypto_dir(node['hops']['mr']['user'])
+kagent_hopsify "Generate x.509" do
+  user node['hops']['mr']['user']
+  crypto_directory crypto_dir
+  action :generate_x509
+  not_if { node["kagent"]["enabled"] == "false" }
+end
 
 yarn_service="jhs"
 service_name="historyserver"
@@ -80,11 +87,12 @@ if node['hops']['systemd'] == "true"
     group "root"
     mode 0664
     variables({
-              :deps => deps
-              })
-if node['services']['enabled'] == "true"
-    notifies :enable, resources(:service => service_name)
-end
+      :deps => deps,
+      :nn_rpc_endpoint => consul_helper.get_service_fqdn("namenode")
+    })
+    if node['services']['enabled'] == "true"
+      notifies :enable, resources(:service => service_name)
+    end
     notifies :restart, resources(:service => service_name)
   end
 

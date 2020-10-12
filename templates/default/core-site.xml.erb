@@ -113,14 +113,6 @@
     <name>hadoop.proxyuser.<%= @hiveUser %>.groups</name>
     <value>*</value>
   </property>
-    <property>
-    <name>hadoop.proxyuser.<%= @jupyterUser %>.hosts</name>
-    <value>*</value>
-  </property>
-  <property>
-    <name>hadoop.proxyuser.<%= @jupyterUser %>.groups</name>
-    <value>*</value>
-  </property>
   <property>
     <name>hadoop.proxyuser.<%= node['hops']['mr']['user'] %>.hosts</name>
     <value>*</value>
@@ -135,14 +127,6 @@
   </property>
   <property>
     <name>hadoop.proxyuser.<%= @sqoopUser %>.groups</name>
-    <value>*</value>
-  </property>
-  <property>
-    <name>hadoop.proxyuser.<%= @servingUser %>.hosts</name>
-    <value>*</value>
-  </property>
-  <property>
-    <name>hadoop.proxyuser.<%= @servingUser %>.groups</name>
     <value>*</value>
   </property>
   <property>
@@ -250,6 +234,11 @@
   <% if node['hops']['tls']['enabled'].casecmp?("true") or node['hops']['rmappsecurity']['jwt']['enabled'].casecmp?("true") -%>
 
   <property>
+    <name>hops.tls.superuser-material-directory</name>
+    <value><%= node['x509']['super-crypto']['dir'] %></value>
+  </property>
+
+  <property>
     <name>hops.hopsworks.host</name>
     <value><%= @hopsworks %></value>
   </property>
@@ -269,24 +258,14 @@
     <name>hops.jwt-manager.service-invalidate-path</name>
     <value><%= node['hops']['jwt-manager']['invalidate-path'] %></value>
   </property>
-  
+
   <% end -%>
-  
+
   <% if node['hops']['tls']['enabled'].eql? "true" -%>
 
   <property>
     <name>hadoop.ssl.enabled.protocols</name>
     <value><%= node['hops']['hadoop']['ssl']['enabled']['protocols'] %></value>
-  </property>
-
-  <!--
-      Directory where service certificates exist. It is used by
-      HopsSSLSocketFactory for superuser.
-      Default: /srv/hops/kagent-certs/keystores
-  -->
-  <property>
-    <name>hops.service.certificates.directory</name>
-    <value><%= node['kagent']['keystore_dir'] %></value>
   </property>
 
   <!--
@@ -322,7 +301,7 @@
     <name>hops.crl.validation.enabled</name>
     <value><%= node['hops']['tls']['crl_enabled'] %></value>
   </property>
-  
+
   <property>
     <name>hops.crl.fetcher.class</name>
     <value><%= node['hops']['tls']['crl_fetcher_class'] %></value>
@@ -365,6 +344,12 @@
   </property>
 <% end -%>
 
+<property>
+  <name>fs.s3a.buffer.dir</name>
+  <value>${java.io.tmpdir}/s3a</value>
+  <description>A comma separated list of temporary directories use for storing blocks of data prior to their being uploaded to S3. When unset (by default), hadoop.tmp.dir is used</description>
+</property>
+
 <% if node['install']['cloud'].eql? "azure" -%>
   <property>
     <name>fs.adl.oauth2.access.token.provider.type</name>
@@ -380,7 +365,7 @@
     <name>fs.adl.oauth2.refresh.token</name>
     <value></value>
   </property>
-  
+
 <% end -%>
 
 </configuration>
