@@ -529,6 +529,10 @@ attribute "hops/yarn/nodemanager_hb_ms",
           :description => "Heartbeat Interval for NodeManager->ResourceManager in ms",
           :type => 'string'
 
+attribute "hops/yarn/max_connect_wait",
+          :description => "Maximum time to wait to establish connection to ResourceManager.",
+          :type => 'string'
+
 attribute "hops/rm/scheduler_class",
           :description => "Java Classname for the Yarn scheduler (fifo, capacity, fair)",
           :type => 'string'
@@ -680,7 +684,7 @@ attribute "hops/nn/replace-dn-on-failure",
           :description => "When the cluster size is extremely small, e.g. 3 nodes or less, cluster administrators may want to set the 'hops/nn/root_dir_storage_policy' policy to NEVER in the default configuration file or disable this feature. Otherwise, users may experience an unusually high rate of pipeline failures since it is impossible to find new datanodes for replacement.",
           :type => "string"
 
-attribute "hops/nn/root_dir_storage_policy",
+attribute "hops/nn/replace-dn-on-failure-policy",
           :description => "This property is used only if the value of hops/nn/replace-dn-on-failure is true. Defult values are ALWAYS, NEVER, DEFAULT",
           :type => "string"
 
