@@ -4,7 +4,7 @@ maintainer_email "jdowling@kth.se"
 license          "Apache v2.0"
 description      'Installs/Configures the Hops distribution'
 long_description IO.read(File.join(File.dirname(__FILE__), 'README.md'))
-version          "1.4.0"
+version          "2.0.0"
 source_url       "https://github.com/hopshadoop/hops-hadoop-chef"
 
 
@@ -465,6 +465,10 @@ attribute "hops/dfs/balance/max_concurrent_moves",
           :description => "Maximum number of threads for Datanode balancer pending moves",
           :type => 'string'
 
+attribute "hops/dfs/mover/retry_max_attempts",
+          :description => "Maximum number of retries to move a block",
+          :type => 'string'
+
 attribute "hops/dfs/excluded_hosts",
           :description => "Comma separated list of hosts to exclude from the HDFS cluster",
           :type => 'string'
@@ -689,7 +693,7 @@ attribute "hops/nn/replace-dn-on-failure-policy",
           :type => "string"
 
 attribute "hops/retry_policy_spec",
-          :description => "Retry policy specification. For example '1.4.0,6,60000,10' means retry 6 times with 10 sec delay and then retry 10 times with 1 min delay.",
+          :description => "Retry policy specification. For example '2.0.0,6,60000,10' means retry 6 times with 10 sec delay and then retry 10 times with 1 min delay.",
           :type => "string"
 
 attribute "hops/retry_policy_enabled",
