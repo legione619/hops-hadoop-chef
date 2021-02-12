@@ -3,8 +3,8 @@ include_attribute "kagent"
 include_attribute "ndb"
 include_attribute "kzookeeper"
 
-default['hops']['versions']                    = "2.8.2.2,2.8.2.3,2.8.2.4,2.8.2.5,2.8.2.6,2.8.2.7,2.8.2.8,2.8.2.9,2.8.2.10,3.2.0.0"
-default['hops']['version']                     = "3.2.0.1-RC0"
+default['hops']['versions']                    = "2.8.2.2,2.8.2.3,2.8.2.4,2.8.2.5,2.8.2.6,2.8.2.7,2.8.2.8,2.8.2.9,2.8.2.10,3.2.0.0,3.2.0.1"
+default['hops']['version']                     = "3.2.0.2-RC0"
 
 default['hops']['hdfs']['user']                = node['install']['user'].empty? ? "hdfs" : node['install']['user']
 default['hops']['hdfs']['user-home']           = "/home/#{node['hops']['hdfs']['user']}"
@@ -59,7 +59,7 @@ default['hops']['yarn']['nodemanager_recovery_dir']          = node['hops']['dat
 default['hops']['hdfs']['user_home']           = "/user"
 default['hops']['hdfs']['apps_dir']            = "/apps"
 default['hops']['hdfs']['blocksize']           = "134217728"
-default['hops']['hdfs']['umask']               = "0027"
+default['hops']['hdfs']['umask']               = "0007"
 
 
 
@@ -90,6 +90,9 @@ default['hops']['reformat']                    = "false"
 default['hops']['format']                      = "true"
 default['hops']['io_buffer_sz']                = 131072
 default['hops']['container_cleanup_delay_sec'] = 0
+
+default['hops']['clusterj']['max_sessions']               = 1000 
+default['hops']['clusterj']['session_max_reuse_count']    = 5000 
 
 default['hops']['nn']['replace-dn-on-failure']        = "true"
 default['hops']['nn']['replace-dn-on-failure-policy'] = "NEVER" 
@@ -363,6 +366,7 @@ default['hops']['rmappsecurity']['x509']['expiration_safety_period']    = "2d"
 default['hops']['rmappsecurity']['x509']['revocation_monitor_interval'] = "12h"
 default['hops']['rmappsecurity']['x509']['sign-path']                   = "/hopsworks-ca/v2/certificate/app"
 default['hops']['rmappsecurity']['x509']['revoke-path']                 = "/hopsworks-ca/v2/certificate/app"
+default['hops']['rmappsecurity']['x509']['key-size']                    = "2048"
 
 default['hops']['rmappsecurity']['jwt']['enabled']                      = "true"
 default['hops']['rmappsecurity']['jwt']['validity']                     = "30m"
@@ -465,7 +469,7 @@ default['hops']['gpu']                                = "false"
 
 #DOCKER
 default['hops']['docker']['enabled']                  = "true"
-default['hops']['docker_version']['ubuntu']           = "19.03.6-0ubuntu1~18.04.3"
+default['hops']['docker_version']['ubuntu']           = "19.03.6-0ubuntu1~18.04.*"
 default['hops']['docker_version']['centos']           = "19.03.8-3"
 default['hops']['selinux_version']['centos']          = "2.119.1-1.c57a6f9"
 default['hops']['containerd_version']['centos']       = "1.2.13-3.1"
