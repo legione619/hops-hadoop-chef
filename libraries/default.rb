@@ -31,7 +31,7 @@ module Hops
       template "#{node['hops']['conf_dir']}/ssl-server.xml" do
         source "ssl-server.xml.erb"
         owner node['hops']['hdfs']['user']
-        group node['kagent']['certs_group']
+        group node['hops']['secure_group']
         mode "770"
         variables({
                     :kstore => "#{node['kagent']['keystore_dir']}/#{fqdn}__kstore.jks",
