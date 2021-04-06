@@ -13,4 +13,4 @@ cookbook 'elastic', github: "giabbo79/elasticsearch-chef", branch: "1.0"
 cookbook 'magic_shell'
 cookbook 'sysctl', '~> 1.0.3'
 cookbook 'cmake', '~> 0.3.0'
-cookbook 'ark', '= 4.0.0'
+cookbook 'ark', '= 5.0.0'
