@@ -3,8 +3,8 @@ include_attribute "kagent"
 include_attribute "ndb"
 include_attribute "kzookeeper"
 
-default['hops']['versions']                    = "2.8.2.2,2.8.2.3,2.8.2.4,2.8.2.5,2.8.2.6,2.8.2.7,2.8.2.8,2.8.2.9,2.8.2.10,3.2.0.0,3.2.0.1"
-default['hops']['version']                     = "3.2.0.2-RC0"
+default['hops']['versions']                    = "2.8.2.2,2.8.2.3,2.8.2.4,2.8.2.5,2.8.2.6,2.8.2.7,2.8.2.8,2.8.2.9,2.8.2.10,3.2.0.0,3.2.0.1,3.2.0.2"
+default['hops']['version']                     = "3.2.0.3-RC0"
 
 default['hops']['hdfs']['user']                = node['install']['user'].empty? ? "hdfs" : node['install']['user']
 default['hops']['hdfs']['user-home']           = "/home/#{node['hops']['hdfs']['user']}"
@@ -47,8 +47,9 @@ default['hops']['aws_s3_bucket']               = "hopsfs.bucket"
 default['hops']['cloud_bypass_disk_cache']         = "false"
 default['hops']['cloud_max_upload_threads']        = "20"
 default['hops']['cloud_store_small_files_in_db']   = "true"
+default['hops']['disable_non_cloud_storage_policies']       = "false"
+default['hops']['nn']['cloud_max_br_threads']               = "10"
 default['hops']['nn']['root_dir_storage_policy']       = ""
-
 
 default['hops']['dn']['data_dir']                       = "file://" + node['hops']['data_dir'] + "/hdfs/dn"
 default['hops']['dn']['data_dir_permissions']           = '700'
@@ -454,6 +455,7 @@ default['hops']['nn']['enable_retrycache']            = "true"
 default['hops']['hdfs']['quota_enabled']              = "true"
 default['hops']['nn']['handler_count']                = 120
 default['hops']['nn']['subtree-executor-limit']       = 40
+default['hops']['nn']['tx_retry_count']               = 5
 
 default['hops']['gcp_url']                            = node['hops']['root_url'] + "/gcs-connector-hadoop2-latest.jar"
 
@@ -494,3 +496,7 @@ default['hops']['xattrs']['max-xattr-size']           = 1039755
 
 #ACL
 default['hops']['acl']['enabled']                     = "true"
+
+#Cache tour files locally for cloud setup
+default["hops"]["cloud_tours_cache"]['base_dir']   = "#{node['hops']['hdfs']['user-home']}/tours_cache"
+default["hops"]["cloud_tours_cache"]['info_csv']   = "tours_info.csv"
