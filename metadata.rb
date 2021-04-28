@@ -788,6 +788,10 @@ attribute "hops/containerd_version/centos",
           :description =>  "the version of containerd to use on centos installation",
           :type => 'string'
 
+attribute "hops/containerd_version/ubuntu",
+          :description =>  "the version of containerd to use on ubuntu installation",
+          :type => 'string'
+
 attribute "hops/docker_dir",
           :description =>  "Path on the host machine to be used to store docker containers,imgs,logs",
           :type => 'string'
@@ -854,4 +858,8 @@ attribute "hops/nn/subtree-executor-limit",
 
 attribute "hops/nn/tx_retry_count",
           :description =>  "Number of times a transaction must be retried if it fails due to transient database exceptions",
+          :type => 'string'
+
+attribute "hops/yarn/is-elastic",
+          :description =>  "if true yarn allows allocating resources that are not in the cluster yet",
           :type => 'string'

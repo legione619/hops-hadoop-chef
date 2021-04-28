@@ -474,6 +474,7 @@ default['hops']['docker']['enabled']                  = "true"
 default['hops']['docker_version']['ubuntu']           = "19.03.6-0ubuntu1~18.04.*"
 default['hops']['docker_version']['centos']           = "19.03.8-3"
 default['hops']['selinux_version']['centos']          = "2.119.1-1.c57a6f9"
+default['hops']['containerd_version']['ubuntu']       = "1.2.6-0ubuntu1~18.04*"
 default['hops']['containerd_version']['centos']       = "1.2.13-3.1"
 default['hops']['docker_img_version']                 = node['install']['version']
 default['hops']['docker_dir']                         = node['install']['dir'].empty? ? "/var/lib/docker" : "#{node['install']['dir']}/docker"
@@ -500,3 +501,5 @@ default['hops']['acl']['enabled']                     = "true"
 #Cache tour files locally for cloud setup
 default["hops"]["cloud_tours_cache"]['base_dir']   = "#{node['hops']['hdfs']['user-home']}/tours_cache"
 default["hops"]["cloud_tours_cache"]['info_csv']   = "tours_info.csv"
+
+default['hops']['yarn']['is-elastic']              = "false"
