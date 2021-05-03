@@ -100,6 +100,10 @@ attribute "hops/yarn/nodemanager_auto_failover_enabled",
           :description => "",
           :type => "string"
 
+attribute "hops/yarn/resourcemanager_zk_address",
+          :description => "Zookeeper server lists, es zk1:2181,zk2:2181,zk3:2181",
+          :type => "string"
+
 attribute "hops/yarn/nodemanager_recovery_enabled",
           :description => "",
           :type => "string"
