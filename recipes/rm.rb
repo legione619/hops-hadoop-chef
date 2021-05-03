@@ -7,7 +7,7 @@ crypto_dir = x509_helper.get_crypto_dir(node['hops']['rm']['user'])
 kagent_hopsify "Generate x.509" do
   user node['hops']['rm']['user']
   crypto_directory crypto_dir
-  common_name consul_helper.get_service_fqdn("resourcemanager")
+#  common_name consul_helper.get_service_fqdn("resourcemanager")
   action :generate_x509
   not_if { node["kagent"]["enabled"] == "false" }
 end
