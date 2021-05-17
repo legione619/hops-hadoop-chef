@@ -242,7 +242,7 @@ default['hops']['limits']['nofile']         = '32768'
 default['hops']['limits']['nproc']          = '65536'
 
 default['hops']['jhs']['https']['port']     = "19443"
-default['hops']['rm']['https']['port'] 	    = "8089"
+default['hops']['rm']['https']['port'] 	    = "8090"
 default['hops']['nm']['https']['port']      = "45443"
 
 default['hops']['yarn']['resource_tracker'] = "false"
