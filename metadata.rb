@@ -812,6 +812,14 @@ attribute "hops/docker/base/download_url",
           :description => "the url of the base conda env docker image",
           :type => 'string'
 
+attribute "hops/docker/address-pools",
+          :description => "default subnet network pools, ie 172.80.0.0/16",
+          :type => 'string'
+
+attribute "hops/docker/address-pools/size",
+          :description => "default size for address pools",
+          :type => 'string'
+
 attribute "hops/cgroup-driver",
           :description =>  "Cgroup driver",
           :type => 'string'

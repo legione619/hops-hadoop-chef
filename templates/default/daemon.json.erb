@@ -8,6 +8,14 @@
         }
     },
     <% end -%>
+    <% if ! node['hops']['docker']['address-pools'].eql?("") %>
+    "default-address-pools": [
+      {
+        "base": "<%= node['hops']['docker']['address-pools'] %>",
+        "size": <%= node['hops']['docker']['address-pools']['size'] %>
+      }
+    ],
+    <% end -%>
     "graph": "<%= node['hops']['docker_dir'] %>",
     "exec-opts": ["native.cgroupdriver=<%= node['hops']['cgroup-driver'] %>"],
     "log-driver": "json-file",
