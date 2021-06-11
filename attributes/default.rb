@@ -489,8 +489,8 @@ default['hops']['docker']['registry']['port']         = 4443
 default['hops']['docker']['registry']['download_url'] = "#{node['download_url']}/kube/docker-images/registry_image.tar"
 default['hops']['docker']['pkg']['download_url']['centos'] ="#{node['download_url']}/docker/#{node['hops']['docker_version']['centos']}/rhel"
 default['hops']['nvidia_pkgs']['download_url']        ="#{node['download_url']}/kube/nvidia"
-default['hops']['docker']['address-pools']            = ""
 default['hops']['docker']['address-pools']['size']    = 24
+default['hops']['docker']['address-pools']            = ""
 
 #XAttrs
 default['hops']['xattrs']['enabled']                  = "true"
