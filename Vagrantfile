@@ -22,7 +22,7 @@ Vagrant.configure("2") do |c|
   c.ssh.insert_key="false"
 # Ssh port on vagrant
   c.vm.network(:forwarded_port, {:guest=>22, :host=>2223})
-  c.vm.network(:forwarded_port, {:guest=>8090, :host=>8090})
+  c.vm.network(:forwarded_port, {:guest=>8089, :host=>8089})
 # MySQL Server
   c.vm.network(:forwarded_port, {:guest=>9090, :host=>33444})
 

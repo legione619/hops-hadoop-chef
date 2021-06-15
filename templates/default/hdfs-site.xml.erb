@@ -15,8 +15,56 @@
   </property>
 
   <property>
+    <name>dfs.namenode.rpc-bind-host</name>
+    <value><%= @bind_ip %></value>
+    <description>
+      The actual address the RPC server will bind to. If this optional address is
+      set, it overrides only the hostname portion of dfs.namenode.rpc-address.
+      It can also be specified per name node or name service for HA/Federation.
+      This is useful for making the name node listen on all interfaces by
+      setting it to 0.0.0.0.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.namenode.servicerpc-bind-host</name>
+    <value><%= @bind_ip %></value>
+    <description>
+      The actual address the service RPC server will bind to. If this optional address is
+      set, it overrides only the hostname portion of dfs.namenode.servicerpc-address.
+      It can also be specified per name node or name service for HA/Federation.
+      This is useful for making the name node listen on all interfaces by
+      setting it to 0.0.0.0.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.namenode.http-bind-host</name>
+    <value><%= @bind_ip %></value>
+    <description>
+      The actual adress the HTTP server will bind to. If this optional address
+      is set, it overrides only the hostname portion of dfs.namenode.http-address.
+      It can also be specified per name node or name service for HA/Federation.
+      This is useful for making the name node HTTP server listen on all
+      interfaces by setting it to 0.0.0.0.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.namenode.https-bind-host</name>
+    <value><%= @bind_ip %></value>
+    <description>
+      The actual adress the HTTPS server will bind to. If this optional address
+      is set, it overrides only the hostname portion of dfs.namenode.https-address.
+      It can also be specified per name node or name service for HA/Federation.
+      This is useful for making the name node HTTPS server listen on all
+      interfaces by setting it to 0.0.0.0.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.namenode.rpc-address</name>
-    <value><%= @nn_rpc_address %></value>
+    <value><%= @nn_address %>:<%= node['hops']['nn']['port'] %></value>
     <description>
       RPC address that handles all clients requests. In the case of HA/Federation where multiple namenodes exist,
       the name service id is added to the name e.g. dfs.namenode.rpc-address.ns1
@@ -27,7 +75,7 @@
 
   <property>
     <name>dfs.namenode.http-address</name>
-    <value><%= @nn_http_address %></value>
+    <value><%= @nn_address %>:<%= node['hops']['nn']['http_port'] %></value>
     <description>The address and the base port where the dfs namenode web ui will listen on. </description>
   </property>
 
@@ -101,6 +149,48 @@
         You can use the following suffix (case insensitive):
         k(kilo), m(mega), g(giga), t(tera), p(peta), e(exa) to specify the size (such as 128k, 512m, 1g, etc.),
         Or provide complete size in bytes (such as 134217728 for 128 MB).
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.client.block.write.replace-datanode-on-failure.enable</name>
+    <value><%= node['hops']['nn']['replace-dn-on-failure'] %></value>
+    <description>
+      If there is a datanode/network failure in the write pipeline,
+      DFSClient will try to remove the failed datanode from the pipeline
+      and then continue writing with the remaining datanodes. As a result,
+      the number of datanodes in the pipeline is decreased. The feature is
+      to add new datanodes to the pipeline.
+
+      This is a site-wide property to enable/disable the feature.
+
+      When the cluster size is extremely small, e.g. 3 nodes or less, cluster
+      administrators may want to set the policy to NEVER in the default
+      configuration file or disable this feature. Otherwise, users may
+      experience an unusually high rate of pipeline failures since it is
+      impossible to find new datanodes for replacement.
+
+      See also dfs.client.block.write.replace-datanode-on-failure.policy
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.client.block.write.replace-datanode-on-failure.policy</name>
+    <value><%= node['hops']['nn']['replace-dn-on-failure-policy'] %></value>
+    <description>
+      This property is used only if the value of
+      dfs.client.block.write.replace-datanode-on-failure.enable is true.
+
+      ALWAYS: always add a new datanode when an existing datanode is removed.
+
+      NEVER: never add a new datanode.
+
+      DEFAULT:
+      Let r be the replication number.
+      Let n be the number of existing datanodes.
+      Add a new datanode only if r is greater than or equal to 3 and either
+      (1) floor(r/2) is greater than or equal to n; or
+      (2) r is greater than n and the block is hflushed/appended.
     </description>
   </property>
 
@@ -320,19 +410,14 @@
 </property>
 
 <property>
-  <name>dfs.https.port</name>
-  <value><%= node['hops']['dfs']['https']['port'] %></value>
-</property>
-
-<property>
   <name>dfs.namenode.https-address</name>
-  <value><%= @nn_https_address %></value>
+  <value><%= @nn_address %>:<%= node['hops']['nn']['https']['port'] %></value>
   <description>The address and the base port where the dfs namenode web ui will listen on. </description>
 </property>
 
 <property>
   <name>dfs.datanode.https.address</name>
-  <value><%= node['hops']['dfs']['datanode']['https']['address'] %></value>
+  <value><%= node['hops']['dn']['https']['address'] %></value>
 </property>
 
 <property>
@@ -420,6 +505,11 @@
 </property>
 
 <property>
+   <name>dfs.mover.retry.max.attempts</name>
+   <value><%= node['hops']['dfs']['mover']['retry_max_attempts'] %></value>
+</property>
+
+<property>
    <name>dfs.namenode.replication.max-streams</name>
    <value><%= node['hops']['dfs']['replication']['max_streams'] %></value>
 </property>
@@ -433,5 +523,138 @@
    <name>dfs.namenode.replication.work.multiplier.per.iteration</name>
    <value><%= node['hops']['dfs']['replication']['work_multiplier_per_iteration'] %></value>
 </property>
+
+<property>
+   <name>dfs.enable.cloud.persistence</name>
+   <value><%= node['hops']['enable_cloud_storage'] %></value>
+</property>
+
+<property>
+   <name>dfs.cloud.provider</name>
+   <value><%= node['hops']['cloud_provider'] %></value>
+   <description>Cloud provider. Currently only AWS is supported</description>
+</property>
+
+<property>
+   <name>dfs.cloud.aws.s3.bucket</name>
+   <value><%= node['hops']['aws_s3_bucket'] %></value>
+   <description>Hopsfs S3 bucket used to store file system blocks</description>
+</property>
+
+<property>
+   <name>dfs.cloud.aws.s3.region</name>
+   <value><%= node['hops']['aws_s3_region'] %></value>
+   <description>AWS Region for file system buckets</description>
+</property>
+
+<property>
+   <name>dfs.dn.cloud.bypass.cache</name>
+   <value><%= node['hops']['cloud_bypass_disk_cache'] %></value>
+   <description></description>
+</property>
+
+<property>
+   <name>dfs.dn.cloud.max.upload.threads</name>
+   <value><%= node['hops']['cloud_max_upload_threads'] %></value>
+   <description></description>
+</property>
+
+<property>
+   <name>dfs.cloud.store.small.files.in.db</name>
+   <value><%= node['hops']['cloud_store_small_files_in_db'] %></value>
+   <description></description>
+</property>
+
+<property>
+   <name>dfs.cloud.concurrent.upload</name>
+   <value>true</value>
+   <description>Upload file block to s3 using multipart API</description>
+</property>
+
+<property>
+   <name>dfs.datanode.ipc.address</name>
+   <value><%= @bind_ip %>:<%= node['hops']['dn']['ipc_port'] %></value>
+   <description>The datanode ipc server address and port. </description>
+</property>
+
+<property>
+   <name>dfs.datanode.address</name>
+   <value><%= @bind_ip %>:<%= node['hops']['dn']['port'] %></value>
+   <description>The datanode server address and port for data transfer.</description>
+</property>
+
+  <property>
+    <name>dfs.namenode.xattrs.enabled</name>
+    <value><%= node['hops']['xattrs']['enabled'] %></value>
+    <description>
+      Whether support for extended attributes is enabled on the NameNode.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.namenode.fs-limits.max-xattrs-per-inode</name>
+    <value><%= node['hops']['xattrs']['max-xattrs-per-inode'] %></value>
+    <description>
+      Maximum number of extended attributes per inode. The maximum allowed
+      number is 127 extended attributes per inode.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.namenode.fs-limits.max-xattr-size</name>
+    <value><%= node['hops']['xattrs']['max-xattr-size'] %></value>
+    <description>
+      The maximum combined size of the name and value of an extended
+      attribute in bytes. It should be larger than 0 and less than or equal
+      to the maximum size (hard limit), which is 3442755. By default, this limit
+      is 13755 bytes, where the name can take up to 255 bytes, and the value
+      size can take up to 13500 bytes.
+    </description>
+  </property>
+  
+  <property>
+    <name>dfs.namenode.acls.enabled</name>
+    <value><%= node['hops']['acl']['enabled'] %></value>
+    <description></description>
+  </property>
+
+  <property>
+    <name>dfs.namenode.subtree-executor-limit</name>
+    <value><%= node['hops']['nn']['subtree-executor-limit'] %></value>
+    <description></description>
+  </property>
+
+  <property>
+    <name>dfs.db.replication</name>
+    <value><%= node['ndb']['NoOfReplicas'] %></value>
+    <description>Number of replicas configured in the NDB cluster.</description>
+  </property>
+
+  <property>
+    <name>dfs.disable.non.cloud.storage.policies</name>
+    <value><%= node['hops']['disable_non_cloud_storage_policies'] %></value>
+    <description>
+      Enable/Disable non cloud storage policies. 
+      This parameter is only effective if 
+      dfs.enable.cloud.persistence is set to true.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.namenode.subtree-executor-limit</name>
+    <value><%= node['hops']['nn']['tx_retry_count'] %></value>
+    <description>
+      Number of times a transaction must be retried
+      if it fails due to transient database exceptions.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.cloud.max.br.threads</name>
+    <value><%= node['hops']['nn']['cloud_max_br_threads'] %></value>
+    <description>
+     Number of threads used by block reporting system for provided blocks
+    </description>
+  </property>
 
 </configuration>

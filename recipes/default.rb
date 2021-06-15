@@ -14,85 +14,77 @@ require 'resolv'
 nnPort=node['hops']['nn']['port']
 hops_group=node['hops']['group']
 my_ip = my_private_ip()
-my_public_ip = my_public_ip()
-rm_private_ip = private_recipe_ip("hops","rm")
-zk_ip = private_recipe_ip('kzookeeper', 'default')
-
-# Convert all private_ips to their hostnames
-# Hadoop requires fqdns to work - won't work with IPs
-hostf = Resolv::Hosts.new
 
 ndb_connectstring()
+
+if service_discovery_enabled()
+  ## Do not try to discover Hopsworks before it has been actual deployed
+  ## default recipe is included by hops::ndb
+  run_list = node.primary_runlist
+  run_discovery_recipes = ['recipe[hops::client]', 'recipe[hops::dn]', 'recipe[hops::jhs]', 'recipe[hops::nm]', 'recipe[hops::nn]', 'recipe[hops::ps]', 'recipe[hops::rm]', 'recipe[hops::rt]']
+  run_discovery = false
+  for dr in run_discovery_recipes do
+    if run_list.include?(dr)
+      run_discovery = true
+      break
+    end
+  end
+
+  hopsworks_port = ""
+  if run_discovery
+    ruby_block 'Discover Hopsworks port' do
+      block do
+        _, hopsworks_port = consul_helper.get_service("glassfish", ["http", "hopsworks"])
+        if hopsworks_port.nil?
+          raise "Could not get Hopsworks port from local Consul agent. Verify Hopsworks is running with service name: glassfish and tags: [http, hopsworks]"
+        end
+      end
+    end
+  end
+
+  glassfish_fqdn = consul_helper.get_service_fqdn("glassfish")
+  rpc_namenode_fqdn = consul_helper.get_service_fqdn("rpc.namenode")
+  resourcemanager_fqdn = consul_helper.get_service_fqdn("resourcemanager")
+  zookeeper_fqdn = consul_helper.get_service_fqdn("client.zookeeper")
+else
+  ## Service Discovery is disabled
+
+  glassfish_fqdn = ""
+  if node.attribute?("hopsworks")
+    glassfish_fqdn = private_recipe_ip("hopsworks", "default")
+    hopsworks_port = "8181"	
+    if node['hopsworks'].attribute?('https') and node['hopsworks']['https'].attribute?('port')	
+        hopsworks_port = node['hopsworks']['https']['port']	
+    end
+  end
+
+  if node['hops']['nn']['private_ips'].include?(my_ip)
+    rpc_namenode_fqdn = my_ip
+  else
+    rpc_namenode_fqdn = private_recipe_ip("hops", "nn")
+  end
+
+  if node['hops']['rm']['private_ips'].include?(my_ip)	
+    resourcemanager_fqdn = my_ip;
+  else
+    resourcemanager_fqdn = private_recipe_ip("hops","rm")	
+  end
+  zookeeper_fqdn = private_recipe_ip('kzookeeper', 'default')
+end
+
+
 
 rpcSocketFactory = "org.apache.hadoop.net.StandardSocketFactory"
 hopsworks_crl_uri = "RPC TLS NOT ENABLED"
 if node['hops']['tls']['enabled'].eql? "true"
   rpcSocketFactory = node['hops']['hadoop']['rpc']['socket']['factory']
-  hopsworks_crl_uri = "#{hopsworks_host()}#{node['hops']['tls']['crl_fetch_path']}"
 end
 
 node.override['hops']['hadoop']['rpc']['socket']['factory'] = rpcSocketFactory
 
-if node['hops']['nn']['private_ips'].length > 1
-  allNNIps = node['hops']['nn']['private_ips'].join(":#{nnPort},") + ":#{nnPort}"
-else
-  allNNIps = "#{node['hops']['nn']['private_ips'][0]}" + ":#{nnPort}"
-end
+nn_rpc_endpoint = "#{rpc_namenode_fqdn}:#{nnPort}"
+defaultFS = "hdfs://#{rpc_namenode_fqdn}:#{nnPort}"
 
-# This is a namenode machine, the rpc-address in hdfs-site.xml is used as "bind to" address
-if node['hops']['nn']['private_ips'].include?(my_ip)
-  nn_rpc_address = "#{my_ip}:#{nnPort}"
-  nn_http_address = "#{my_ip}:#{node['hops']['nn']['http_port']}"
-  nn_https_address = "#{my_ip}:#{node['hops']['dfs']['https']['port']}"
-else
-  # This is a non namenode machine, a random namenode works
-  nn_rpc_address = private_recipe_ip("hops", "nn") + ":#{nnPort}"
-  nn_http_address = private_recipe_ip("hops", "nn") + ":#{node['hops']['nn']['http_port']}"
-  nn_https_address = private_recipe_ip("hops", "nn") + ":#{node['hops']['nn']['https_port']}"
-end
-
-defaultFS = "hdfs://#{nn_rpc_address}"
-
-#
-# Constraints for Attributes - enforce them!
-#
-# If the user specified "gpu" to be true in a cluster definition, then accept that.
-# Else, if cuda/accept_nvidia_download_terms is set to true, then make 'gpu' true.
-if node['hops']['gpu'].eql?("false")
-  if node.attribute?("cuda") && node['cuda'].attribute?("accept_nvidia_download_terms") && node['cuda']['accept_nvidia_download_terms'].eql?("true")
-    node.override['hops']['gpu'] = "true"
-  end
-end
-
-if node['hops']['yarn']['gpus'].eql?("*")
-  num_gpus = 0
-  if node['hops']['yarn']['gpus'].eql?("*") && node['hops']['yarn']['gpu_impl_class'].eql?("io.hops.management.nvidia.NvidiaManagementLibrary")
-    ruby_block 'discover_gpus' do
-      block do
-        Chef::Resource::RubyBlock.send(:include, Chef::Mixin::ShellOut)
-        command = "nvidia-smi -L | wc -l"
-        num_gpus = shell_out(command).stdout.gsub(/\n/, '')
-      end
-    end
-  end
-  if node['hops']['yarn']['gpus'].eql?("*") && node['hops']['yarn']['gpu_impl_class'].eql?("io.hops.management.amd.AMDManagementLibrary")
-    ruby_block 'discover_gpus' do
-      block do
-        Chef::Resource::RubyBlock.send(:include, Chef::Mixin::ShellOut)
-        num_gpus = Dir["/sys/module/amdgpu/drivers/pci:amdgpu/*/drm/card*"].length
-      end
-    end
-  end
-
-else
-  num_gpus = node['hops']['yarn']['gpus']
-end
-
-Chef::Log.info "Number of gpus found was: #{node['hops']['yarn']['gpus']}"
-
-#
-# End Constraints
-#
 
 hopsworksUser = "glassfish"
 if node.attribute?("hopsworks")
@@ -101,14 +93,6 @@ if node.attribute?("hopsworks")
   end
 end
 node.override['hopsworks']['user'] = hopsworksUser
-
-jupyterUser = "jupyter"
-if node.attribute?('jupyter')
-  if node['jupyter'].attribute?('user')
-    jupyterUser = node['jupyter']['user']
-  end
-end
-node.override['jupyter']['user'] = jupyterUser
 
 livyUser = "livy"
 if node.attribute?("livy")
@@ -134,13 +118,6 @@ if node.attribute?('sqoop')
 end
 node.override['sqoop']['user'] = sqoopUser
 
-servingUser = "serving"
-if node.attribute?('serving')
-  if node['serving'].attribute?('user')
-    servingUser = node['serving']['user']
-  end
-end
-node.override['serving']['user'] = servingUser
 
 flinkUser = "flink"
 if node.attribute?('flink')
@@ -162,26 +139,26 @@ if node['ndb']['TransactionInactiveTimeout'].to_i < node['hops']['leader_check_i
  raise "The leader election protocol has a higher timeout than the transaction timeout in NDB. We can get false suspicions for a live leader. Invalid configuration."
 end
 
-var_hopsworks_host = hopsworks_host()
-
+sd_enabled = service_discovery_enabled() ? "true" : "false"
 template "#{node['hops']['conf_dir']}/core-site.xml" do
   source "core-site.xml.erb"
   owner node['hops']['hdfs']['user']
   group node['hops']['group']
   mode "744"
-  variables({
+  variables( lazy {
+    {
      :defaultFS => defaultFS,
-     :hopsworks => var_hopsworks_host,
+     :hopsworks => "https://#{glassfish_fqdn}:#{hopsworks_port}",
      :hopsworksUser => hopsworksUser,
      :livyUser => livyUser,
      :hiveUser => hiveUser,
-     :jupyterUser => jupyterUser,
      :sqoopUser => sqoopUser,
-     :servingUser => servingUser,
      :flinkUser => flinkUser,
-     :allNNs => allNNIps,
+     :nn_rpc_endpoint => nn_rpc_endpoint,
      :rpcSocketFactory => rpcSocketFactory,
-     :hopsworks_crl_uri => hopsworks_crl_uri
+     :hopsworks_crl_uri => "https://#{glassfish_fqdn}:#{hopsworks_port}#{node['hops']['tls']['crl_fetch_path']}",
+     :service_discovery_enabled => sd_enabled
+    }
   })
   action :create
 end
@@ -219,20 +196,33 @@ template "#{node['hops']['conf_dir']}/yarn-jmxremote.password" do
 end
 
 
-template "#{node['hops']['sbin_dir']}/kill-process.sh" do
-  source "kill-process.sh.erb"
-  owner node['hops']['hdfs']['user']
-  group node['hops']['secure_group']
-  mode "750"
-  action :create
-end
-
 template "#{node['hops']['sbin_dir']}/set-env.sh" do
   source "set-env.sh.erb"
   owner node['hops']['hdfs']['user']
   group node['hops']['secure_group']
   mode "750"
   action :create
+end
+
+bind_ip = "0.0.0.0"
+if conda_helpers.bind_services_private_ip
+  bind_ip = my_ip
+end
+
+if node['install']['localhost'].casecmp?("true")
+  nn_address = "localhost"
+else 
+  if node['hops']['nn']['private_ips'].include?(my_ip)
+    # If I'm a NameNode set it to my fqdn or IP
+    if service_discovery_enabled()
+      nn_address = node['fqdn']
+    else
+      nn_address = my_ip
+    end
+  else
+    # Otherwise use Service Discovery FQDN
+    nn_address = rpc_namenode_fqdn
+  end
 end
 
 location_domain_id = node['hops']['nn']['private_ips_domainIds'].has_key?(my_ip) ? node['hops']['nn']['private_ips_domainIds'][my_ip] : 0
@@ -243,10 +233,9 @@ template "#{node['hops']['conf_dir']}/hdfs-site.xml" do
   mode "754"
   cookbook "hops"
   variables({
-    :nn_rpc_address => nn_rpc_address,
     :location_domain_id => location_domain_id,
-    :nn_http_address => nn_http_address,
-    :nn_https_address => nn_https_address
+    :bind_ip => bind_ip,
+    :nn_address => nn_address
   })
   action :create
 end
@@ -260,22 +249,24 @@ template "#{node['hops']['conf_dir']}/erasure-coding-site.xml" do
 end
 
 # If CGroups are enabled, set the correct LCEResourceHandler
-if node['hops']['yarn']['cgroups'].eql?("true") && node['hops']['gpu'].eql?("true")
-  resource_handler = "org.apache.hadoop.yarn.server.nodemanager.util.CgroupsLCEResourcesHandlerGPU"
-elsif node['hops']['yarn']['cgroups'].eql?("true") && node['hops']['gpu'].eql?("false")
+if node['hops']['yarn']['cgroups'].eql?("true")
   resource_handler = "org.apache.hadoop.yarn.server.nodemanager.util.CgroupsLCEResourcesHandler"
 else
   resource_handler = "org.apache.hadoop.yarn.server.nodemanager.util.DefaultLCEResourcesHandler"
 end
 
-if node['hops']['rm']['private_ips'].include?(my_ip)
-  # This is a resource manager machine
-  rm_private_ip = my_ip;
-end
-
 if node['hops']['yarn']['detect-hardware-capabilities'].casecmp?("true")
   node.override['hops']['yarn']['vcores'] = "-1"
   node.override['hops']['yarn']['memory_mbs'] = "-1"
+end
+
+ha_ids = (0...node['hops']['rm']['private_ips'].size()).to_a()
+my_id = node['hops']['rm']['private_ips'].index(my_ip)
+
+if node['hops']['gpu'].eql?("false")
+  if node.attribute?("cuda") && node['cuda'].attribute?("accept_nvidia_download_terms") && node['cuda']['accept_nvidia_download_terms'].eql?("true")
+    node.override['hops']['gpu'] = "true"
+  end
 end
 
 template "#{node['hops']['conf_dir']}/yarn-site.xml" do
@@ -286,14 +277,48 @@ template "#{node['hops']['conf_dir']}/yarn-site.xml" do
   mode "744"
   variables( lazy {
     h = {}
-    h[:rm_private_ip] = rm_private_ip
-    h[:my_private_ip] = my_ip
-    h[:zk_ip] = zk_ip
+    h[:resourcemanager_fqdn] = resourcemanager_fqdn
+    h[:zookeeper_fqdn] = zookeeper_fqdn
     h[:resource_handler] = resource_handler
-    h[:num_gpus] = num_gpus
+    h[:ha_ids] = ha_ids
+    h[:my_id] = my_id
+    h[:bind_ip] = bind_ip
     h
   })
   action :create
+end
+
+template "#{node['hops']['conf_dir']}/resource-types.xml" do
+  source "resource-types.xml.erb"
+  owner node['hops']['yarn']['user']
+  group node['hops']['group']
+  cookbook "hops"
+  mode "744"
+  action :create
+end
+
+
+if node['hops']['docker']['enabled'].eql?("true")
+
+  if service_discovery_enabled()
+    registry_host=consul_helper.get_service_fqdn("registry")
+  else
+    begin
+      registry_ip = private_recipe_ip("hops","docker_registry")
+      registry_host = resolve_hostname(registry_ip)
+    rescue
+      registry_host = "localhost"
+      Chef::Log.warn "could not find the docker registry ip!"
+    end
+  end
+
+  trusted_registries = "#{registry_host}:#{node['hops']['docker']['registry']['port']}"
+  
+  unless node['hops']['docker']['trusted_registries'].eql?("")
+    trusted_registries = "#{trusted_registries},#{node['hops']['docker']['trusted_registries']}"
+  end
+
+  docker_path = shell_out("which docker").stdout
 end
 
 template "#{node['hops']['conf_dir']}/container-executor.cfg" do
@@ -303,7 +328,9 @@ template "#{node['hops']['conf_dir']}/container-executor.cfg" do
   cookbook "hops"
   mode "740"
   variables({
-              :hops_group => hops_group
+              :hops_group => hops_group,
+              :trusted_registries => trusted_registries,
+              :docker_path => docker_path
             })
   action :create
 end
@@ -314,16 +341,6 @@ template "#{node['hops']['conf_dir']}/yarn-env.sh" do
   group node['hops']['group']
   mode "750"
   action :create
-end
-
-# The ACL to keystore directory is needed during deployment
-if node['hops']['tls']['enabled'].eql? "true"
-  bash "update-acl-of-keystore" do
-    user "root"
-    code <<-EOH
-         setfacl -Rm u:#{node['hops']['hdfs']['user']}:rx #{node['kagent']['certs_dir']}
-         EOH
-  end
 end
 
 # Remove previous cron entry

@@ -1,5 +1,12 @@
 include_recipe "hops::default"
 
+crypto_dir = x509_helper.get_crypto_dir(node['hops']['mr']['user'])
+kagent_hopsify "Generate x.509" do
+  user node['hops']['mr']['user']
+  crypto_directory crypto_dir
+  action :generate_x509
+  not_if { node["kagent"]["enabled"] == "false" }
+end
 
 yarn_service="jhs"
 service_name="historyserver"
@@ -46,82 +53,48 @@ node.normal['mr']['dirs'] = [node['hops']['mr']['staging_dir'], node['hops']['mr
  end
 
 deps = ""
+if service_discovery_enabled()
+  deps += "consul.service "
+end
 if exists_local("hops", "nn") 
-  deps = "namenode.service"
+  deps += "namenode.service "
 end
 
-if node['hops']['systemd'] == "true"
+service service_name do
+  provider Chef::Provider::Service::Systemd
+  supports :restart => true, :stop => true, :start => true, :status => true
+  action :nothing
+end
 
-  service service_name do
-    provider Chef::Provider::Service::Systemd
-    supports :restart => true, :stop => true, :start => true, :status => true
-    action :nothing
-  end
-
-  case node['platform_family']
-  when "debian"
-    systemd_script = "/lib/systemd/system/#{service_name}.service"
-  when "rhel"
-    systemd_script = "/usr/lib/systemd/system/#{service_name}.service" 
-  end
+case node['platform_family']
+when "debian"
+  systemd_script = "/lib/systemd/system/#{service_name}.service"
+when "rhel"
+  systemd_script = "/usr/lib/systemd/system/#{service_name}.service" 
+end
 
 
-  file systemd_script do
-    action :delete
-    ignore_failure true
-  end
-  
-  template systemd_script do
-    source "#{service_name}.service.erb"
-    owner "root"
-    group "root"
-    mode 0664
-    variables({
-              :deps => deps
-              })
-if node['services']['enabled'] == "true"
+file systemd_script do
+  action :delete
+  ignore_failure true
+end
+
+template systemd_script do
+  source "#{service_name}.service.erb"
+  owner "root"
+  group "root"
+  mode 0664
+  variables({
+    :deps => deps,
+    :nn_rpc_endpoint => consul_helper.get_service_fqdn("namenode")
+  })
+  if node['services']['enabled'] == "true"
     notifies :enable, resources(:service => service_name)
+  end
 end
-    notifies :restart, resources(:service => service_name)
-  end
 
-  kagent_config "#{service_name}" do
-    action :systemd_reload
-  end
-  
-  directory "/etc/systemd/system/#{service_name}.service.d" do
-    owner "root"
-    group "root"
-    mode "755"
-    action :create
-  end
-
-  template "/etc/systemd/system/#{service_name}.service.d/limits.conf" do
-    source "limits.conf.erb"
-    owner "root"
-    mode 0774
-    action :create
-  end 
-
-else #sysv
-
-  service service_name do
-    provider Chef::Provider::Service::Init::Debian
-    supports :restart => true, :stop => true, :start => true, :status => true
-    action :nothing
-  end
-
-  template "/etc/init.d/#{service_name}" do
-    source "#{service_name}.erb"
-    owner "root"
-    group "root"
-    mode 0755    
-if node['services']['enabled'] == "true"
-    notifies :enable, resources(:service => service_name)
-end
-    notifies :restart, resources(:service => service_name), :immediately
-  end
-
+kagent_config "#{service_name}" do
+  action :systemd_reload
 end
 
 if node['kagent']['enabled'] == "true" 
@@ -131,4 +104,3 @@ if node['kagent']['enabled'] == "true"
     config_file "#{node['hops']['conf_dir']}/mapred-site.xml"
   end
 end
-

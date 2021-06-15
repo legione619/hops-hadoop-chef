@@ -1,5 +1,5 @@
+include_recipe "hops::_config"
 require 'resolv'
-
 
 ndb_connectstring()
 my_ip = my_private_ip()
@@ -28,7 +28,6 @@ remote_file "#{Chef::Config['file_cache_path']}/#{flyway_tgz}" do
   action :create_if_missing
 end
 
-mysql_host = private_recipe_ip("ndb","mysqld")
 flyway_basedir="#{node['hops']['dir']}/ndb-hops"
 
 bash "unpack_flyway" do
@@ -50,9 +49,6 @@ template "#{flyway_basedir}/flyway/conf/flyway.conf" do
   source "flyway.conf.erb"
   owner node['hops']['hdfs']['user']
   mode 0750
-  variables({
-              :mysql_host => my_ip
-            })
   action :create  
 end
 
@@ -65,6 +61,8 @@ end
 remote_file "#{flyway_basedir}/flyway/sql/V0.0.2__initial_tables.sql" do
   source "#{node['hops']['schema_dir']}/schema.sql"
   owner node['hops']['hdfs']['user']
+  headers get_ee_basic_auth_header()
+  sensitive true
   mode 0750
   action :create_if_missing
 end
@@ -81,9 +79,13 @@ versions.push(flyway_version)
 
 prev="2.8.2.1"
 for version in versions do
+  # Handle versions that are of type X.Y.Z-RC or X.Y.Z-EE-RC
+  version = version.split("-")[0]
   remote_file "#{flyway_basedir}/flyway/sql/V#{version}__hops.sql" do
     source "#{node['hops']['schema_dir']}/update-schema_#{prev}_to_#{version}.sql"
     owner node['hops']['hdfs']['user']
+    headers get_ee_basic_auth_header()
+    sensitive true
     mode 0750
     action :create_if_missing
   end
@@ -97,6 +99,8 @@ remote_file "#{node['hops']['dir']}/ndb-hops/#{base_filename}" do
   source package_url
   owner node['hops']['hdfs']['user']
   group node['hops']['group']
+  headers get_ee_basic_auth_header()
+  sensitive true
   mode "0755"
   # TODO - checksum
   action :create_if_missing
@@ -113,11 +117,6 @@ link "#{node['hops']['dir']}/ndb-hops/ndb-dal.jar" do
   to "#{node['hops']['dir']}/ndb-hops/ndb-dal-#{node['hops']['version']}-#{node['ndb']['version']}.jar"
 end
 
-mysql_ip = my_ip
-if node['mysql']['localhost'] == "true"
-  mysql_ip = "localhost"
-end
-
 template "#{node['hops']['home']}/etc/hadoop/ndb.props" do
   source "ndb.props.erb"
   owner node['hops']['hdfs']['user']
@@ -125,7 +124,6 @@ template "#{node['hops']['home']}/etc/hadoop/ndb.props" do
   mode "750"
   variables({
               :ndb_connectstring => node['ndb']['connectstring'],
-              :mysql_host => my_ip
             })
 end
 

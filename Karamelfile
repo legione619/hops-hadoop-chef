@@ -8,8 +8,9 @@ dependencies:
       - ndb::mysqld
   - recipe: hops::nn
     global:
+      - consul::master
+      - consul::slave
       - ndb::mysqld_tls
-      - kagent::default
       - hops::ndb
 # This is to handle upgrades from 0.6 to 0.7
 # Make sure the hive db has been migrated with inodeid long
@@ -27,6 +28,7 @@ dependencies:
     global:
       - hops::rm
       - hadoop_spark::yarn
+      - hops::docker_registry
   - recipe: hops::jhs
     global:
       - hops::dn
@@ -36,4 +38,10 @@ dependencies:
   - recipe: hops::test
     global:
       - hops::dn
-
+  - recipe: hops::docker_image
+    global:
+      - hops::docker_registry
+  - recipe: hops::docker_registry
+    global:
+      - consul::master
+      - consul::slave
