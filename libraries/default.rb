@@ -18,8 +18,8 @@ module Hops
       template "#{node['hops']['conf_dir']}/ssl-server.xml" do
         source "ssl-server.xml.erb"
         owner node['hops']['hdfs']['user']
-        group node['hops']['secure_group']
-        mode "770"
+        group node['hops']['group']
+        mode "775"
         variables({
                     :master_token => master_token,
                     :renew_tokens => renew_tokens
