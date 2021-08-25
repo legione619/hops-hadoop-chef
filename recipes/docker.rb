@@ -36,12 +36,34 @@ when 'rhel'
   end
 
 when 'debian'
-  package 'containerd' do
-    version node['hops']['containerd_version']['ubuntu']
+  packages = [
+    "containerd_#{node['hops']['containerd_version']['ubuntu']}_amd64.deb",
+    "docker.io_#{node['hops']['docker_version']['ubuntu']}_amd64.deb",
+    "runc_#{node['hops']['runc_version']['ubuntu']}_amd64.deb"
+  ]
+
+  packages.each do |pkg|
+    remote_file "#{Chef::Config['file_cache_path']}/#{pkg}" do
+      source "#{node['hops']['docker']['pkg']['download_url']['ubuntu']}/#{pkg}"
+      owner 'root'
+      group 'root'
+      mode '0755'
+      action :create
+    end
   end
 
-  package 'docker.io' do
-    version node['hops']['docker_version']['ubuntu']
+  # Additional dependencies needed, but dpkg doesn't know how to fetch them
+  # from the repositories
+  package ['pigz', 'bridge-utils']
+
+  bash "install_pkgs" do
+    user 'root'
+    group 'root'
+    cwd Chef::Config['file_cache_path']
+    code <<-EOH
+        dpkg -i #{packages.join(" ")}
+    EOH
+    not_if "dpkg -l docker.io | grep #{node['hops']['docker_version']['ubuntu']}"
   end
 end
 
@@ -122,11 +144,10 @@ directory '/etc/docker/' do
   recursive true
 end
 
-registry_addr=""
-
+insecure_registries = node['hops']['docker']['insecure_registries'].split(",")
 if service_discovery_enabled()
-  registry_host=consul_helper.get_service_fqdn("registry")
-  registry_addr="#{registry_host}:#{node['hops']['docker']['registry']['port']}"
+  registry_host = consul_helper.get_service_fqdn("registry")
+  insecure_registries << "#{registry_host}:#{node['hops']['docker']['registry']['port']}"
 end
 
 # Special case where its a localhost installation for Ubuntu
@@ -134,13 +155,14 @@ end
 # resolve our own hostname
 override_dns = node['install']['localhost'].casecmp?("true") && node['platform_family'].eql?("debian")
 dns_servers = ["127.0.0.53"]
+
 template '/etc/docker/daemon.json' do
   source 'daemon.json.erb'
   owner 'root'
   mode '0755'
   action :create
   variables({
-              :registry_addr => registry_addr,
+              :insecure_registries => insecure_registries,
               :override_dns => override_dns,
               :dns_servers => dns_servers
             })

@@ -4,7 +4,7 @@ maintainer_email "jdowling@kth.se"
 license          "Apache v2.0"
 description      'Installs/Configures the Hops distribution'
 long_description IO.read(File.join(File.dirname(__FILE__), 'README.md'))
-version          "2.2.0"
+version          "2.3.0"
 source_url       "https://github.com/hopshadoop/hops-hadoop-chef"
 
 
@@ -22,7 +22,6 @@ recipe            "hops::client", "Installs libaries and configuration files for
 recipe            "hops::purge", "Removes all hops-hadoop files and dirs and ndb-dal, but doesnt drop hops db from NDB"
 recipe            "hops::_config", "Internal recipe for setting config values"
 
-depends 'java', '~> 7.0.0'
 depends 'magic_shell', '~> 1.0.0'
 depends 'sysctl', '~> 1.0.3'
 depends 'cmake', '~> 0.3.0'
@@ -32,6 +31,7 @@ depends 'conda'
 depends 'kzookeeper'
 depends 'elastic'
 depends 'consul'
+depends 'java'
 
 %w{ ubuntu debian rhel centos }.each do |os|
   supports os
@@ -97,10 +97,6 @@ attribute "hops/yarn/nodemanager_recovery_dir",
 
 attribute "hops/yarn/resourcemanager_ha_enabled",
           :description => "",
-          :type => "string"
-
-attribute "hops/yarn/resourcemanager_zk_address",
-          :description => "Zookeeper server lists, es zk1:2181,zk2:2181,zk3:2181",
           :type => "string"
 
 attribute "hops/yarn/resourcemanager_auto_failover_enabled",
@@ -235,6 +231,14 @@ attribute "hops/clusterj/max_sessions",
 
 attribute "hops/clusterj/session_max_reuse_count",
           :description => "Reuse count for ClusterJ session object. After this the session is restarted to release the native memeory held by the session object. New session creation can be expensive taking more than a sec.",
+          :type => 'string'
+
+attribute "hops/clusterj/enable_dto_cache",
+          :description => "Enable dto cache provided by ClusterJ lib",
+          :type => 'string'
+
+attribute "hops/clusterj/enable_session_cache",
+          :description => "Enable session cache provided by ClusterJ lib",
           :type => 'string'
 
 attribute "hops/tls/enabled",
@@ -717,7 +721,7 @@ attribute "hops/nn/replace-dn-on-failure-policy",
           :type => "string"
 
 attribute "hops/retry_policy_spec",
-          :description => "Retry policy specification. For example '2.2.0,6,60000,10' means retry 6 times with 10 sec delay and then retry 10 times with 1 min delay.",
+          :description => "Retry policy specification. For example '2.3.0,6,60000,10' means retry 6 times with 10 sec delay and then retry 10 times with 1 min delay.",
           :type => "string"
 
 attribute "hops/retry_policy_enabled",
@@ -800,6 +804,10 @@ attribute "hops/docker_dir",
           :description =>  "Path on the host machine to be used to store docker containers,imgs,logs",
           :type => 'string'
 
+attribute "hops/docker/insecure_registries",
+          :description => "Insecure registries to add to the /etc/docker/daemon.json (comma separated list host:port)",
+          :type => 'string'
+
 attribute "hops/docker/trusted_registries",
           :description => "Trusted registries to pull docker images for yarn (comma separated list host:port)",
           :type => 'string'
@@ -810,14 +818,6 @@ attribute "hops/docker/mounts",
 
 attribute "hops/docker/base/download_url",
           :description => "the url of the base conda env docker image",
-          :type => 'string'
-
-attribute "hops/docker/address-pools",
-          :description => "default subnet network pools, ie 172.80.0.0/16",
-          :type => 'string'
-
-attribute "hops/docker/address-pools/size",
-          :description => "default size for address pools",
           :type => 'string'
 
 attribute "hops/cgroup-driver",
@@ -874,4 +874,12 @@ attribute "hops/nn/tx_retry_count",
 
 attribute "hops/yarn/is-elastic",
           :description =>  "if true yarn allows allocating resources that are not in the cluster yet",
+          :type => 'string'
+
+attribute "hops/nn/audit_log",
+          :description =>  "Enable audit logs for HopsFS (default false)",
+          :type => 'string'
+
+attribute "hops/rm/audit_log",
+          :description =>  "Enable audit logs for Yarn RM (default false)",
           :type => 'string'

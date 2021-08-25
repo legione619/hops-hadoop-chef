@@ -3,8 +3,8 @@ include_attribute "kagent"
 include_attribute "ndb"
 include_attribute "kzookeeper"
 
-default['hops']['versions']                    = "2.8.2.2,2.8.2.3,2.8.2.4,2.8.2.5,2.8.2.6,2.8.2.7,2.8.2.8,2.8.2.9,2.8.2.10,3.2.0.0,3.2.0.1,3.2.0.2"
-default['hops']['version']                     = "3.2.0.3-RC0"
+default['hops']['versions']                    = "2.8.2.2,2.8.2.3,2.8.2.4,2.8.2.5,2.8.2.6,2.8.2.7,2.8.2.8,2.8.2.9,2.8.2.10,3.2.0.0,3.2.0.1,3.2.0.2,3.2.0.3"
+default['hops']['version']                     = "3.2.0.4-RC0"
 
 default['hops']['hdfs']['user']                = node['install']['user'].empty? ? "hdfs" : node['install']['user']
 default['hops']['hdfs']['user-home']           = "/home/#{node['hops']['hdfs']['user']}"
@@ -94,6 +94,9 @@ default['hops']['container_cleanup_delay_sec'] = 0
 
 default['hops']['clusterj']['max_sessions']               = 1000 
 default['hops']['clusterj']['session_max_reuse_count']    = 5000 
+default['hops']['clusterj']['enable_dto_cache']           = "false" 
+default['hops']['clusterj']['enable_session_cache']       = "false" 
+
 
 default['hops']['nn']['replace-dn-on-failure']        = "true"
 default['hops']['nn']['replace-dn-on-failure-policy'] = "NEVER" 
@@ -225,9 +228,7 @@ default['mysql']['port']                    = default['ndb']['mysql_port']
 
 default['hops']['schema_dir']               = "#{node['hops']['root_url']}/hops-schemas"
 
-default['hops']['log_level']                = "DEBUG"
-
-default['hops']['ndb']['version']              = "8.0.21"
+default['hops']['ndb']['version']              = "21.04.0"
 
 if node['hops']['ndb']['version'] != ""
   node.override['ndb']['version'] = node['hops']['ndb']['version']
@@ -471,13 +472,20 @@ default['hops']['gpu']                                = "false"
 
 #DOCKER
 default['hops']['docker']['enabled']                  = "true"
-default['hops']['docker_version']['ubuntu']           = "19.03.6-0ubuntu1~18.04.*"
+default['hops']['docker_version']['ubuntu']           = "19.03.6-0ubuntu1~18.04.2"
 default['hops']['docker_version']['centos']           = "19.03.8-3"
 default['hops']['selinux_version']['centos']          = "2.119.1-1.c57a6f9"
-default['hops']['containerd_version']['ubuntu']       = "1.2.6-0ubuntu1~18.04*"
+default['hops']['containerd_version']['ubuntu']       = "1.2.6-0ubuntu1~18.04.2"
 default['hops']['containerd_version']['centos']       = "1.2.13-3.1"
+default['hops']['runc_version']['ubuntu']             = "1.0.0~rc95-0ubuntu1~18.04.1"
+
+
+default['hops']['docker']['pkg']['download_url']['centos'] ="#{node['download_url']}/docker/#{node['hops']['docker_version']['centos']}/rhel"
+default['hops']['docker']['pkg']['download_url']['ubuntu'] ="#{node['download_url']}/docker/ubuntu/#{node['hops']['docker_version']['ubuntu'].split('-')[0]}/"
+
 default['hops']['docker_img_version']                 = node['install']['version']
 default['hops']['docker_dir']                         = node['install']['dir'].empty? ? "/var/lib/docker" : "#{node['install']['dir']}/docker"
+default['hops']['docker']['insecure_registries']      = ""
 default['hops']['docker']['trusted_registries']       = ""
 default['hops']['docker']['mounts']                   = "#{node['hops']['conf_dir']},#{node['hops']['dir']}/spark,#{node['hops']['dir']}/flink,#{node['hops']['dir']}/apache-livy"
 default['hops']['docker']['base']['image']['name']           = "base"
@@ -485,12 +493,12 @@ default['hops']['docker']['base']['image']['python']['name']  = "python37"
 default['hops']['docker']['base']['image']['python']['version'] = "3.7"
 default['hops']['docker']['base']['download_url']     = "#{node['download_url']}/kube/docker-images/#{node['hops']['docker_img_version']}/base.tar"
 default['hops']['cgroup-driver']                      = "cgroupfs"
+
 default['hops']['docker']['registry']['port']         = 4443
+
 default['hops']['docker']['registry']['download_url'] = "#{node['download_url']}/kube/docker-images/registry_image.tar"
-default['hops']['docker']['pkg']['download_url']['centos'] ="#{node['download_url']}/docker/#{node['hops']['docker_version']['centos']}/rhel"
+
 default['hops']['nvidia_pkgs']['download_url']        ="#{node['download_url']}/kube/nvidia"
-default['hops']['docker']['address-pools']['size']    = 24
-default['hops']['docker']['address-pools']            = ""
 
 #XAttrs
 default['hops']['xattrs']['enabled']                  = "true"
@@ -505,3 +513,7 @@ default["hops"]["cloud_tours_cache"]['base_dir']   = "#{node['hops']['hdfs']['us
 default["hops"]["cloud_tours_cache"]['info_csv']   = "tours_info.csv"
 
 default['hops']['yarn']['is-elastic']              = "false"
+
+# Audit logs
+default['hops']['nn']['audit_log']                 = "false"
+default['hops']['rm']['audit_log']                 = "false"
