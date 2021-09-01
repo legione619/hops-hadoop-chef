@@ -175,7 +175,7 @@ end
 
 case node['platform_family']
 when 'debian'
-  package 'libsnappy1v5'
+  package ['libsnappy1v5', 'libncurses5']
 when 'rhel'
   package 'snappy'
   # bind-utils is needed to start the datanode, if HopsFS is installed without Hopsworks
