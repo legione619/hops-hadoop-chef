@@ -99,6 +99,10 @@ attribute "hops/yarn/resourcemanager_ha_enabled",
           :description => "",
           :type => "string"
 
+attribute "hops/yarn/resourcemanager_zk_address",
+          :description => "Zookeeper server lists, es zk1:2181,zk2:2181,zk3:2181",
+          :type => "string"
+
 attribute "hops/yarn/resourcemanager_auto_failover_enabled",
           :description => "",
           :type => "string"
