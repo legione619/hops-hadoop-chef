@@ -205,7 +205,7 @@ if node['hops']['native_libraries'].eql? "true"
   protobuf_lib_prefix = "/usr"
   case node['platform_family']
   when "debian"
-    package ['g++', 'autoconf', 'automake', 'libtool', 'zlib1g-dev', 'libssl-dev', 'pkg-config', 'maven']
+    package ['g++', 'autoconf', 'automake', 'libtool', 'zlib1g-dev', 'libssl-dev', 'pkg-config', 'maven','libncurses5']
   when "rhel"
     protobuf_lib_prefix = "/"
 
