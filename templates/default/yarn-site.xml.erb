@@ -208,6 +208,10 @@
     <name>yarn.resourcemanager.webapp.address.<%= id %></name>
     <value><%= id %>.<%= @resourcemanager_fqdn %>:8088</value>
   </property>
+  <property>
+    <name>yarn.resourcemanager.webapp.https.address.<%= id %></name>
+    <value><%= id %>.<%= @resourcemanager_fqdn %>:8090</value>
+  </property>
 
 <% end -%>
 
