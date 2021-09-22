@@ -177,7 +177,7 @@ if my_ip.eql? node['hops']['nn']['private_ips'][0]
     bash 'add_disk_undo_file' do
       user node['ndb']['user']
       code <<-EOF
-        #{node['ndb']['scripts_dir']}/mysql-client.sh INFORMATION_SCHEMA -e "SELECT MAXIMUM_SIZE from FILES WHERE FILE_TYPE like 'UNDO LOG' AND FILE_NAME like 'undo_%'" | sed 's/\t/,/g'  > /tmp/undo.csv
+        #{node['ndb']['scripts_dir']}/mysql-client.sh INFORMATION_SCHEMA -e "SELECT MAXIMUM_SIZE from FILES WHERE FILE_TYPE like 'UNDO LOG' AND FILE_NAME like '%undo_%'" | sed 's/\t/,/g'  > /tmp/undo.csv
         # all of the undo file sizes are now in /tmp/undo.csv. Sum them up using awk, result on last line.
         existing_size=$(awk -F"," '{print;x+=$1}END{print x}' /tmp/undo.csv | tail -1)
         desired_size="#{node['ndb']['nvme']['undofile_size']}"
