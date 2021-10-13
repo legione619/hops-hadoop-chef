@@ -223,6 +223,9 @@ default['hops']['log']['remote_retention']     = "150d"
 default['ndb']['libndb']                    = "#{node['mysql']['version_dir']}/lib"
 default['mysql']['port']                    = default['ndb']['mysql_port']
 
+#Default mysql consul url
+default['mysql']['url']                     = default['ndb']['mysql']['url']
+
 default['hops']['schema_dir']               = "#{node['hops']['root_url']}/hops-schemas"
 
 default['hops']['log_level']                = "DEBUG"
