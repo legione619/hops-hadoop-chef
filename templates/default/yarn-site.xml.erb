@@ -692,5 +692,31 @@
     <name>yarn.resourcemanager.is-elastic</name>
     <value><%= node['hops']['yarn']['is-elastic'] %></value>
   </property>
-  
+
+#Custom api property
+  <property>
+    <name>yarn.resourcemanager.rmappsecurity.jwt.generate-path</name>
+    <value>/hopsworks-api/api/jwt</value>
+  </property>
+
+  <property>
+    <name>yarn.resourcemanager.rmappsecurity.jwt.invalidate-path</name>
+    <value>/hopsworks-api/api/jwt/key</value>
+  </property>
+
+  <property>
+    <name>yarn.resourcemanager.rmappsecurity.jwt.renew-path</name>
+    <value>/hopsworks-api/api/jwt</value>
+  </property>
+
+  <property>
+    <name>yarn.resourcemanager.rmappsecurity.jwt.service-invalidate-path</name>
+    <value>/hopsworks-api/api/jwt/service</value>
+  </property>
+
+  <property>
+    <name>yarn.resourcemanager.rmappsecurity.jwt.service-renew-path</name>
+    <value>/hopsworks-api/api/jwt/service</value>
+  </property>
+
 </configuration>
