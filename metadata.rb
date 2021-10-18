@@ -800,6 +800,10 @@ attribute "hops/containerd_version/ubuntu",
           :description =>  "the version of containerd to use on ubuntu installation",
           :type => 'string'
 
+attribute "hops/runc_version/ubuntu",
+          :description =>  "the version of runc to use on ubuntu installation",
+          :type => 'string'
+
 attribute "hops/docker_dir",
           :description =>  "Path on the host machine to be used to store docker containers,imgs,logs",
           :type => 'string'
