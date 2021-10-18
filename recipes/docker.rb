@@ -55,7 +55,7 @@ when 'debian'
   packages = [
     "containerd=#{node['hops']['containerd_version']['ubuntu']}_amd64.deb",
     "docker.io=#{node['hops']['docker_version']['ubuntu']}_amd64.deb",
-    "runc=#{node['hops']['runc_version']['ubuntu']}"
+    "runc=#{node['hops']['runc_version']['ubuntu']}"]
 
 
   # Additional dependencies needed, but dpkg doesn't know how to fetch them
