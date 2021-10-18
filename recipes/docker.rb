@@ -67,7 +67,7 @@ when 'debian'
     group 'root'
     cwd Chef::Config['file_cache_path']
     code <<-EOH
-        dpkg -i #{packages.join(" ")}
+        apt-get install -y #{packages.join(" ")}
     EOH
     not_if "dpkg -l docker.io | grep #{node['hops']['docker_version']['ubuntu']}"
   end
