@@ -12,7 +12,7 @@ services = [
             id = "rm-health-check"
             name = "Health check for ResourceManager"
             args = ["<%= node['hops']['bin_dir'] %>/consul/rm-health.sh"]
-            interval = "20s"
+            interval = "5s"
             timeout = "20s"
             status = "passing"
         }
