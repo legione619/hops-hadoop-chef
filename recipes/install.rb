@@ -3,10 +3,6 @@ require 'etc'
 include_recipe "hops::_config"
 include_recipe "java"
 
-if node['hops']['docker']['enabled'].eql?("true")
-  include_recipe "hops::docker"
-end
-
 if node['hops']['nn']['direct_memory_size'].to_i < node['hops']['nn']['heap_size'].to_i
   raise "Invalid Configuration. Set Java DirectByteBuffer memory as high as Java heap size otherwise, the NNs might experience severe GC pauses."
 end
@@ -89,12 +85,15 @@ group node['hops']['group'] do
 end
 
 group node['hops']['secure_group'] do
+  gid node['hops']['secure_group_id']
   action :create
+  not_if "getent group #{node['hops']['secure_group']}"
   not_if { node['install']['external_users'].casecmp("true") == 0 }
 end
 
 user node['hops']['hdfs']['user'] do
   home node['hops']['hdfs']['user-home']
+  uid node['hops']['hdfs']['user_id']
   gid node['hops']['group']
   system true
   shell "/bin/bash"
@@ -106,6 +105,7 @@ end
 
 user node['hops']['yarn']['user'] do
   home node['hops']['yarn']['user-home']
+  uid node['hops']['yarn']['user_id']
   gid node['hops']['group']
   system true
   shell "/bin/bash"
@@ -117,6 +117,7 @@ end
 
 user node['hops']['mr']['user'] do
   home node['hops']['mr']['user-home']
+  uid node['hops']['mr']['user_id']
   gid node['hops']['group']
   system true
   shell "/bin/bash"
@@ -143,12 +144,30 @@ end
 
 user node['hops']['rm']['user'] do
   home node['hops']['rm']['user-home']
+  uid node['hops']['rm']['user_id']
   gid node['hops']['secure_group']
   system true
   shell "/bin/bash"
   action :create
   manage_home true
   not_if "getent passwd #{node['hops']['rm']['user']}"
+  not_if { node['install']['external_users'].casecmp("true") == 0 }
+end
+
+group node['logger']['group'] do
+  gid node['logger']['group_id']
+  action :create
+  not_if "getent group #{node['logger']['group']}"
+  not_if { node['install']['external_users'].casecmp("true") == 0 }
+end
+
+user node['logger']['user'] do
+  uid node['logger']['user_id']
+  gid node['logger']['group_id']
+  shell "/bin/nologin"
+  action :create
+  system true
+  not_if "getent passwd #{node['logger']['user']}"
   not_if { node['install']['external_users'].casecmp("true") == 0 }
 end
 
@@ -168,14 +187,14 @@ end
 
 group node['hops']['group'] do
   action :modify
-  members [node['hops']['hdfs']['user'], node['hops']['yarn']['user'], node['hops']['mr']['user'], node['hops']['yarnapp']['user'], node['hops']['rm']['user']]
+  members [node['hops']['hdfs']['user'], node['hops']['yarn']['user'], node['hops']['mr']['user'], node['hops']['yarnapp']['user'], node['hops']['rm']['user'], node['logger']['user']]
   append true
   not_if { node['install']['external_users'].casecmp("true") == 0 }
 end
 
 case node['platform_family']
 when 'debian'
-  package ['libsnappy1v5', 'libncurses5']
+  package 'libsnappy1v5'
 when 'rhel'
   package 'snappy'
   # bind-utils is needed to start the datanode, if HopsFS is installed without Hopsworks
@@ -248,6 +267,51 @@ directory node['hops']['dir'] do
   group node['hops']['group']
   mode "0755"
   action :create
+end
+
+directory node['data']['dir'] do
+  owner 'root'
+  group 'root'
+  mode '0775'
+  action :create
+  not_if { ::File.directory?(node['data']['dir']) }
+end
+
+directory node['hops']['data_volume']['root_dir'] do
+  owner node['hops']['hdfs']['user']
+  group node['hops']['group']
+  mode "0770"
+  action :create
+end
+
+directory node['hops']['data_volume']['data_dir'] do
+  owner node['hops']['hdfs']['user']
+  group node['hops']['group']
+  mode "0770"
+  action :create
+end
+
+bash 'Move Hops hopsdata to data volume' do
+  user 'root'
+  code <<-EOH
+    set -e
+    mv -f #{node['hops']['data_dir']}/* #{node['hops']['data_volume']['data_dir']}
+    rm -rf #{node['hops']['data_dir']}
+  EOH
+  only_if { conda_helpers.is_upgrade }
+  only_if { File.directory?(node['hops']['data_dir'])}
+  not_if { File.symlink?(node['hops']['data_dir'])}
+end
+
+link node['hops']['data_dir'] do
+  owner node['hops']['hdfs']['user']
+  group node['hops']['group']
+  mode "0770"
+  to node['hops']['data_volume']['data_dir']
+end
+
+if node['hops']['docker']['enabled'].eql?("true")
+  include_recipe "hops::docker"
 end
 
 dd=node['hops']['data_dir']
@@ -354,11 +418,30 @@ bash 'chown-sbin' do
   EOH
 end
 
-directory node['hops']['logs_dir'] do
+directory node['hops']['data_volume']['logs_dir'] do
   owner node['hops']['hdfs']['user']
   group node['hops']['group']
-  mode "0770"
+  mode '0770'
   action :create
+end
+
+bash 'Move Hops logs to data volume' do
+  user 'root'
+  code <<-EOH
+    set -e
+    mv -f #{node['hops']['logs_dir']}/* #{node['hops']['data_volume']['logs_dir']}
+    rm -rf #{node['hops']['logs_dir']}
+  EOH
+  only_if { conda_helpers.is_upgrade }
+  only_if { File.directory?(node['hops']['logs_dir'])}
+  not_if { File.symlink?(node['hops']['logs_dir'])}
+end
+
+link node['hops']['logs_dir'] do
+  owner node['hops']['hdfs']['user']
+  group node['hops']['group']
+  mode '0770'
+  to node['hops']['data_volume']['logs_dir']
 end
 
 # Touch file with correct ownership and permission

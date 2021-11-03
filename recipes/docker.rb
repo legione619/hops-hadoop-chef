@@ -1,6 +1,13 @@
 # Install and start Docker
 Chef::Recipe.send(:include, Hops::Helpers)
 
+group 'docker' do
+  gid node['hops']['docker']['group_id']
+  action :create
+  not_if "getent group docker"
+  not_if { node['install']['external_users'].casecmp("true") == 0 }
+end
+
 case node['platform_family']
 when 'rhel'
 
@@ -36,27 +43,21 @@ when 'rhel'
   end
 
 when 'debian'
-#  packages = [
-#    "containerd_#{node['hops']['containerd_version']['ubuntu']}_amd64.deb",
-#    "docker.io_#{node['hops']['docker_version']['ubuntu']}_amd64.deb",
-#    "runc_#{node['hops']['runc_version']['ubuntu']}_amd64.deb"
-#  ]
-
-#  packages.each do |pkg|
-#    remote_file "#{Chef::Config['file_cache_path']}/#{pkg}" do
-#      source "#{node['hops']['docker']['pkg']['download_url']['ubuntu']}/#{pkg}"
-#      owner 'root'
-#      group 'root'
-#      mode '0755'
-#      action :create
-#    end
-#  end
-
   packages = [
-    "containerd=#{node['hops']['containerd_version']['ubuntu']}",
-    "docker.io=#{node['hops']['docker_version']['ubuntu']}",
-    "runc=#{node['hops']['runc_version']['ubuntu']}"]
+    "containerd_#{node['hops']['containerd_version']['ubuntu']}_amd64.deb",
+    "docker.io_#{node['hops']['docker_version']['ubuntu']}_amd64.deb",
+    "runc_#{node['hops']['runc_version']['ubuntu']}_amd64.deb"
+  ]
 
+  packages.each do |pkg|
+    remote_file "#{Chef::Config['file_cache_path']}/#{pkg}" do
+      source "#{node['hops']['docker']['pkg']['download_url']['ubuntu']}/#{pkg}"
+      owner 'root'
+      group 'root'
+      mode '0755'
+      action :create
+    end
+  end
 
   # Additional dependencies needed, but dpkg doesn't know how to fetch them
   # from the repositories
@@ -67,7 +68,7 @@ when 'debian'
     group 'root'
     cwd Chef::Config['file_cache_path']
     code <<-EOH
-        apt-get install -y #{packages.join(" ")}
+        dpkg -i #{packages.join(" ")}
     EOH
     not_if "dpkg -l docker.io | grep #{node['hops']['docker_version']['ubuntu']}"
   end
@@ -133,12 +134,42 @@ if node['hops']['gpu'].eql?("true")
 end
 
 if !node['hops']['docker_dir'].eql?("/var/lib/docker")
-  directory node['hops']['docker_dir'] do
+  directory node['hops']['data_volume']['docker'] do
     owner 'root'
     group 'root'
     mode '0711'
     recursive true
     action :create
+  end
+
+  systemd_unit "docker.service" do
+    action :stop
+    only_if { conda_helpers.is_upgrade }
+    only_if { File.directory?(node['hops']['docker_dir'])}
+    not_if { File.symlink?(node['hops']['docker_dir'])}
+    notifies :run, 'bash[move-docker-images]', :immediately
+  end
+
+  bash 'move-docker-images' do
+    user 'root'
+    code <<-EOH
+      set -e
+      mv -f #{node['hops']['docker_dir']}/* #{node['hops']['data_volume']['docker']}
+      rm -rf #{node['hops']['docker_dir']}
+    EOH
+    action :nothing
+    notifies :start, 'systemd_unit[docker.service]', :immediately
+  end
+
+  systemd_unit "docker.service" do
+    action :nothing
+  end
+
+  link node['hops']['docker_dir'] do
+    owner 'root'
+    group 'root'
+    mode '0711'
+    to node['hops']['data_volume']['docker']
   end
 end
 

@@ -4,7 +4,7 @@ maintainer_email "jdowling@kth.se"
 license          "Apache v2.0"
 description      'Installs/Configures the Hops distribution'
 long_description IO.read(File.join(File.dirname(__FILE__), 'README.md'))
-version          "2.3.0"
+version          "2.4.0"
 source_url       "https://github.com/hopshadoop/hops-hadoop-chef"
 
 
@@ -97,10 +97,6 @@ attribute "hops/yarn/nodemanager_recovery_dir",
 
 attribute "hops/yarn/resourcemanager_ha_enabled",
           :description => "",
-          :type => "string"
-
-attribute "hops/yarn/resourcemanager_zk_address",
-          :description => "Zookeeper server lists, es zk1:2181,zk2:2181,zk3:2181",
           :type => "string"
 
 attribute "hops/yarn/resourcemanager_auto_failover_enabled",
@@ -405,12 +401,28 @@ attribute "hops/group",
           :description => "Group to run hdfs/yarn/yarnapp/mr as",
           :type => 'string'
 
+attribute "hops/secure_group",
+          :description => "Privileged group for service users",
+          :type => 'string'
+
+attribute "hops/secure_group_id",
+          :description => "Privileged group ID. Default: 1505",
+          :type => 'string'
+
 attribute "hops/hdfs/user-home",
           :description => "Home directory of hdfs user",
           :type => 'string'
 
 attribute "hops/yarn/user-home",
           :description => "Home directory of yarn user",
+          :type => 'string'
+
+attribute "hops/rm/user",
+          :description => "Username of the user running ResourceManager",
+          :type => 'string'
+
+attribute "hops/rm/user_id",
+          :description => "rmyarn user id. Default: 1508",
           :type => 'string'
 
 attribute "hops/rm/user-home",
@@ -425,6 +437,10 @@ attribute "hops/yarn/user",
           :description => "Username to run yarn as",
           :type => 'string'
 
+attribute "hops/yarn/user_id",
+          :description => "Yarn user id. Default: 1507",
+          :type => 'string'
+
 attribute "hops/yarnapp/user",
           :description => "Username to run yarn applications as",
           :type => 'string'
@@ -437,8 +453,24 @@ attribute "hops/mr/user",
           :description => "Username to run mapReduce as",
           :type => 'string'
 
+attribute "hops/mr/user_id",
+          :description => "MapReduce user id. Default: 1509",
+          :type => 'string'
+
 attribute "hops/hdfs/user",
           :description => "Username to run hdfs as",
+          :type => 'string'
+
+attribute "hops/hdfs/user_id",
+          :description => "hdfs user id. Default: 1506",
+          :type => 'string'
+
+attribute "hops/hdfs/group",
+          :description => "hdfs group name",
+          :type => 'string'
+
+attribute "hops/hdfs/group_id",
+          :description => "hdfs group id. Default: 1506",
           :type => 'string'
 
 attribute "hops/hdfs/superuser_group",
@@ -447,6 +479,14 @@ attribute "hops/hdfs/superuser_group",
 
 attribute "hops/hdfs/blocksize",
           :description => "HDFS Blocksize (128k, 512m, 1g, etc). Default 128m.",
+          :type => 'string'
+
+attribute "hops/hdfs/max-blocks-per-file",
+          :description => "Max blocks per file. Default 10240",
+          :type => 'string'
+
+attribute "hops/hdfs/max-directory-items",
+          :description => "Max immediate descendants of a directory. Default 10240",
           :type => 'string'
 
 attribute "hops/hdfs/umask",
@@ -725,7 +765,7 @@ attribute "hops/nn/replace-dn-on-failure-policy",
           :type => "string"
 
 attribute "hops/retry_policy_spec",
-          :description => "Retry policy specification. For example '2.3.0,6,60000,10' means retry 6 times with 10 sec delay and then retry 10 times with 1 min delay.",
+          :description => "Retry policy specification. For example '2.4.0,6,60000,10' means retry 6 times with 10 sec delay and then retry 10 times with 1 min delay.",
           :type => "string"
 
 attribute "hops/retry_policy_enabled",
@@ -784,6 +824,10 @@ attribute "hops/docker/enabled",
           :description =>  "switch to install or not install docker (installing docker need hopsworks for certificates)",
           :type => 'string'
 
+attribute "hops/docker/group_id",
+          :description =>  "docker group id. Default: 1513",
+          :type => 'string'
+
 attribute "hops/docker_version/ubuntu",
           :description =>  "the version of docker to use on ubuntu installation",
           :type => 'string'
@@ -802,10 +846,6 @@ attribute "hops/containerd_version/centos",
 
 attribute "hops/containerd_version/ubuntu",
           :description =>  "the version of containerd to use on ubuntu installation",
-          :type => 'string'
-
-attribute "hops/runc_version/ubuntu",
-          :description =>  "the version of runc to use on ubuntu installation",
           :type => 'string'
 
 attribute "hops/docker_dir",
@@ -890,4 +930,16 @@ attribute "hops/nn/audit_log",
 
 attribute "hops/rm/audit_log",
           :description =>  "Enable audit logs for Yarn RM (default false)",
+          :type => 'string'
+
+attribute "hops/fuse/dist_url",
+          :description =>  "Location of HopsFS fuse mount binary",
+          :type => 'string'
+
+attribute "hops/fuse/staging_folder",
+          :description =>  "Directory to store temp files",
+          :type => 'string'
+
+attribute "hops/fuse/mount_point",
+          :description =>  "Directory to mount the filesystem",
           :type => 'string'
