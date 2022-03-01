@@ -122,14 +122,6 @@
     <value>*</value>
   </property>
   <property>
-    <name>hadoop.proxyuser.<%= @sqoopUser %>.hosts</name>
-    <value>*</value>
-  </property>
-  <property>
-    <name>hadoop.proxyuser.<%= @sqoopUser %>.groups</name>
-    <value>*</value>
-  </property>
-  <property>
     <name>hadoop.proxyuser.<%= @flinkUser %>.hosts</name>
     <value>*</value>
   </property>
@@ -371,11 +363,5 @@
     <value>true</value>
   </property>
 <% end -%>
-
-  <property>
-    <name>fs.hopsfs.impl</name>
-    <value>org.apache.hadoop.hdfs.DistributedFileSystem</value>
-    <description>The FileSystem for hopsfs: uris.</description>
-  </property>
 
 </configuration>

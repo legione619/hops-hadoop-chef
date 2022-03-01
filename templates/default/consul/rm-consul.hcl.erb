@@ -12,7 +12,7 @@ services = [
             id = "rm-health-check"
             name = "Health check for ResourceManager"
             args = ["<%= node['hops']['bin_dir'] %>/consul/rm-health.sh"]
-            interval = "5s"
+            interval = "20s"
             timeout = "20s"
             status = "passing"
         }
@@ -84,7 +84,7 @@ services = [
             "https",
             "webapp"
         ]
-        port = 8090
+        port = 8089
         check = {
             id = "rm-https-check"
             alias_service = "rm/rpc"
